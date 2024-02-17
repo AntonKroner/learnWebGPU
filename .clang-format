@@ -1,0 +1,148 @@
+---
+AccessModifierOffset: -4
+AlignAfterOpenBracket: AlwaysBreak #i would like to use BlockIndent, but then if conditions get confused
+AlignArrayOfStructures: Right
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignConsecutiveMacros: false
+AlignConsecutiveShortCaseStatements: 
+  Enabled: true
+AlignEscapedNewlines: Left
+AlignOperands: true
+AlignTrailingComments: false
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLambdasOnASingleLine: Inline
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: No
+AttributeMacros: []
+BinPackArguments: false
+BinPackParameters: false
+BitFieldColonSpacing: After
+BraceWrapping:
+  AfterClass: false
+  AfterControlStatement: false
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterObjCDeclaration: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeCatch: false
+  BeforeElse: true
+  IndentBraces: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+BracedInitializerIndentWidth: 2
+BreakAfterAttributes: Never
+BreakArrays: false
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBraces: Custom
+BreakBeforeConceptDeclarations: Never
+BreakBeforeInheritanceComma: false
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializersBeforeComma: false
+BreakConstructorInitializers: BeforeComma
+BreakInheritanceList: AfterComma
+BreakAfterJavaFieldAnnotations: false
+BreakStringLiterals: true
+ColumnLimit: 90
+CommentPragmas: '^ IWYU pragma:'
+CompactNamespaces: false
+ConstructorInitializerIndentWidth: 2
+ContinuationIndentWidth: 2
+Cpp11BracedListStyle: false
+DerivePointerAlignment: false
+DisableFormat: false
+EmptyLineBeforeAccessModifier: Never
+ExperimentalAutoDetectBinPacking: false
+FixNamespaceComments: true
+ForEachMacros: []
+IncludeBlocks: Preserve
+IncludeCategories:
+  - Regex: '.*'
+    Priority: 1
+IncludeIsMainRegex: '(Test)?$'
+IndentAccessModifiers: true
+IndentCaseBlocks: true
+IndentCaseLabels: true
+IndentExternBlock:  Indent
+IndentGotoLabels: false
+IndentPPDirectives: BeforeHash
+IndentRequiresClause: true
+IndentWidth: 2
+IndentWrappedFunctionNames: false
+InsertBraces: true
+InsertNewlineAtEOF: true
+JavaScriptQuotes: Leave
+JavaScriptWrapImports: true
+KeepEmptyLinesAtEOF: false
+KeepEmptyLinesAtTheStartOfBlocks: false
+LambdaBodyIndentation: Signature
+Language: Cpp
+MacroBlockBegin: ''
+MacroBlockEnd: ''
+Macros: []
+MaxEmptyLinesToKeep: 1
+NamespaceIndentation: All
+NamespaceMacros: []
+ObjCBinPackProtocolList: Auto
+ObjCBlockIndentWidth: 8
+ObjCSpaceAfterProperty: true
+ObjCSpaceBeforeProtocolList: true
+PackConstructorInitializers: Never
+PenaltyBreakAssignment: 10
+PenaltyBreakBeforeFirstCallParameter: 30
+PenaltyBreakComment: 10
+PenaltyBreakFirstLessLess: 0
+PenaltyBreakOpenParenthesis: 100
+PenaltyBreakString: 10
+PenaltyExcessCharacter: 60
+PenaltyIndentedWhitespace: 1
+PenaltyReturnTypeOnItsOwnLine: 1000
+PointerAlignment: Left
+QualifierAlignment: Left #Custom
+#QualifierOrder: ['const', 'inline', 'static', 'friend', 'constexpr', 'volatile', 'restrict', 'type']
+ReflowComments: false
+RemoveBracesLLVM: false
+RemoveParentheses: MultipleParentheses
+RemoveSemicolon: false
+SeparateDefinitionBlocks: Leave
+ShortNamespaceLines: 0
+SortIncludes: false
+SortUsingDeclarations: false
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: false
+SpaceAroundPointerQualifiers: Default
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: false
+SpaceBeforeInheritanceColon: false
+SpaceBeforeParens: ControlStatementsExceptForEachMacros
+SpaceBeforeRangeBasedForLoopColon: false
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: true
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: Never
+SpacesInContainerLiterals: true
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+Standard: Latest
+StatementAttributeLikeMacros: []
+StatementMacros: []
+TabWidth: 8
+TypeNames: []
+TypenameMacros: []
+UseTab: Never #necessary otherwise switch-statements are messed up
+...

@@ -1,0 +1,17 @@
+[
+	{
+		"arguments": [
+			"/usr/bin/gcc-13",
+			"-Wall",
+			"-Wpedantic",
+			"--std=gnu2x",
+			"-c",
+			"-o",
+			"build/main.o",
+			"main.c"
+		],
+		"directory": "/home/claire/versioned/other/spectral-methods",
+		"file": "/home/claire/versioned/other/spectral-methods/main.c",
+		"output": "/home/claire/versioned/other/spectral-methods/build/main.o"
+	}
+]

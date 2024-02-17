@@ -1,0 +1,14 @@
+---
+#CompileFlags:
+#	Remove: ["--threads", "0", "-ccbin", "g++"]
+#	Add: ["--no-cuda-version-check"]
+InlayHints:
+  BlockEnd: No
+  Designators: Yes
+  Enabled: No
+  ParameterNames: Yes
+  DeducedTypes: Yes
+  TypeNameLimit: 24
+Diagnostics:
+  UnusedIncludes: Strict
+...

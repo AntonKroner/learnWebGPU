@@ -1,0 +1,36 @@
+{
+	"files.exclude": {
+		".*": true,
+		"*.json": true,
+		"build": false,
+		"README.md": true,
+		"LICENSE": true,
+		"CODEOWNERS": true,
+		"vcpkg": true,
+		"vcpkg_installed": true
+	},
+	"files.insertFinalNewline": true,
+	"editor.tabSize": 2,
+	"editor.detectIndentation": false,
+	"editor.insertSpaces": false,
+	"editor.formatOnSave": true,
+	"editor.formatOnPaste": true,
+	"editor.codeActionsOnSave": {
+		"source.fixAll.eslint": "explicit",
+		"eslint.autoFixOnSave": "explicit"
+	},
+	"eslint.format.enable": true,
+	"eslint.lintTask.enable": true,
+	"javascript.format.enable": false,
+	"typescript.format.enable": false,
+	"files.associations": {
+		"*.tup": "markdown",
+		"*.h": "c"
+	},
+	"cSpell.words": [
+		"glfw",
+		"Uncaptured",
+		"wgpu",
+		"Workgroups"
+	],
+}
