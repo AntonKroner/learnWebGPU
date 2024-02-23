@@ -1,3 +1,6 @@
+#ifndef device_H_
+#define device_H_
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -104,3 +107,4 @@ void device_inspect(WGPUDevice device) {
       limits.limits.maxComputeWorkgroupsPerDimension);
   }
 }
+#endif // device_H_

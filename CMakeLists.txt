@@ -5,7 +5,11 @@ project(
     LANGUAGES C CXX
 )
 
-add_executable(webgpu.exe main.c)
+add_executable(webgpu.exe
+	main.c
+	01basic3d/basic3d.h
+	01basic3d/triangle.c
+)
 set_target_properties(webgpu.exe PROPERTIES
     C_STANDARD 23
     COMPILE_WARNING_AS_ERROR ON

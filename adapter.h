@@ -1,3 +1,6 @@
+#ifndef adapter_H_
+#define adapter_H_
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -146,3 +149,4 @@ void adapter_inspect(WGPUAdapter adapter) {
   printf("- adapterType: %u\n", properties.adapterType);
   printf("- backendType: %u\n", properties.backendType);
 }
+#endif // adapter_H_
