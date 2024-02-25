@@ -7,8 +7,10 @@ project(
 
 add_executable(webgpu.exe
 	main.c
-	01basic3d/basic3d.h
+	adapter.c
+	device.c
 	01basic3d/triangle.c
+	01basic3d/buffers.c
 )
 set_target_properties(webgpu.exe PROPERTIES
     C_STANDARD 23

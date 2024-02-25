@@ -13,7 +13,6 @@ static bool setWindowHints() {
   glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
   return true;
 }
-
 bool basic3d_triangle() {
   bool result = false;
   WGPUInstanceDescriptor descriptor = { .nextInChain = 0 };
@@ -32,12 +31,14 @@ bool basic3d_triangle() {
     wgpuInstanceRelease(instance);
     glfwTerminate();
     perror("Could not open window!");
-    result = true;
+    result = false;
   }
   else {
     WGPUSurface surface = glfwGetWGPUSurface(instance, window);
-    WGPURequestAdapterOptions adapterOptions = { .nextInChain = 0,
-                                                 .compatibleSurface = surface };
+    WGPURequestAdapterOptions adapterOptions = {
+      .nextInChain = 0,
+      .compatibleSurface = surface,
+    };
     WGPUAdapter adapter = adapter_request(instance, &adapterOptions);
     WGPUDeviceDescriptor deviceDescriptor = {
       .nextInChain = 0,
@@ -87,8 +88,32 @@ bool basic3d_triangle() {
                                                       &shaderCodeDescriptor.chain };
     WGPUShaderModule shaderModule =
       wgpuDeviceCreateShaderModule(device, &shaderDescriptor);
+    WGPUBlendState blendState = {
+      .color.srcFactor = WGPUBlendFactor_SrcAlpha,
+      .color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha,
+      .color.operation = WGPUBlendOperation_Add,
+      .alpha.srcFactor = WGPUBlendFactor_Zero,
+      .alpha.dstFactor = WGPUBlendFactor_One,
+      .alpha.operation = WGPUBlendOperation_Add
+    };
+    WGPUColorTargetState colorTarget = {
+      .nextInChain = 0,
+      .format = swapChainDescriptor.format,
+      .blend = &blendState,
+      .writeMask = WGPUColorWriteMask_All,
+    };
+    WGPUFragmentState fragmentState = {
+      .nextInChain = 0,
+      .module = shaderModule,
+      .entryPoint = "fs_main",
+      .constantCount = 0,
+      .constants = 0,
+      .targetCount = 1,
+      .targets = &colorTarget,
+    };
     WGPURenderPipelineDescriptor pipelineDesc = {
       .nextInChain = 0,
+      .fragment = &fragmentState,
       .vertex.bufferCount = 0,
       .vertex.buffers = 0,
       .vertex.module = shaderModule,
@@ -99,33 +124,12 @@ bool basic3d_triangle() {
       .primitive.stripIndexFormat = WGPUIndexFormat_Undefined,
       .primitive.frontFace = WGPUFrontFace_CCW,
       .primitive.cullMode = WGPUCullMode_None,
+      .depthStencil = 0,
+      .multisample.count = 1,
+      .multisample.mask = ~0u,
+      .multisample.alphaToCoverageEnabled = false,
+      .layout = 0,
     };
-    WGPUFragmentState fragmentState = {};
-    fragmentState.nextInChain = 0;
-    pipelineDesc.fragment = &fragmentState;
-    fragmentState.module = shaderModule;
-    fragmentState.entryPoint = "fs_main";
-    fragmentState.constantCount = 0;
-    fragmentState.constants = 0;
-    WGPUBlendState blendState;
-    blendState.color.srcFactor = WGPUBlendFactor_SrcAlpha;
-    blendState.color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
-    blendState.color.operation = WGPUBlendOperation_Add;
-    blendState.alpha.srcFactor = WGPUBlendFactor_Zero;
-    blendState.alpha.dstFactor = WGPUBlendFactor_One;
-    blendState.alpha.operation = WGPUBlendOperation_Add;
-    WGPUColorTargetState colorTarget = {};
-    colorTarget.nextInChain = 0;
-    colorTarget.format = swapChainDescriptor.format;
-    colorTarget.blend = &blendState;
-    colorTarget.writeMask = WGPUColorWriteMask_All;
-    fragmentState.targetCount = 1;
-    fragmentState.targets = &colorTarget;
-    pipelineDesc.depthStencil = 0;
-    pipelineDesc.multisample.count = 1;
-    pipelineDesc.multisample.mask = ~0u;
-    pipelineDesc.multisample.alphaToCoverageEnabled = false;
-    pipelineDesc.layout = 0;
     WGPURenderPipeline pipeline = wgpuDeviceCreateRenderPipeline(device, &pipelineDesc);
 
     while (!glfwWindowShouldClose(window)) {
@@ -135,34 +139,37 @@ bool basic3d_triangle() {
         perror("Cannot acquire next swap chain texture\n");
         break;
       }
-      WGPUCommandEncoderDescriptor commandEncoderDesc = {};
-      commandEncoderDesc.nextInChain = 0;
-      commandEncoderDesc.label = "Command Encoder";
+      WGPUCommandEncoderDescriptor commandEncoderDesc = {
+        .nextInChain = 0,
+        .label = "Command Encoder",
+      };
       WGPUCommandEncoder encoder =
         wgpuDeviceCreateCommandEncoder(device, &commandEncoderDesc);
+      WGPURenderPassColorAttachment renderPassColorAttachment = {
+        .view = nextTexture,
+        .resolveTarget = 0,
+        .loadOp = WGPULoadOp_Clear,
+        .storeOp = WGPUStoreOp_Store,
+        .clearValue = (WGPUColor){0.9, 0.1, 0.2, 1.0},
+      };
       WGPURenderPassDescriptor renderPassDesc = {
         .nextInChain = 0,
+        .colorAttachmentCount = 1,
+        .colorAttachments = &renderPassColorAttachment,
+        .depthStencilAttachment = 0,
+        .timestampWriteCount = 0,
+        .timestampWrites = 0,
       };
-      WGPURenderPassColorAttachment renderPassColorAttachment = {};
-      renderPassColorAttachment.view = nextTexture;
-      renderPassColorAttachment.resolveTarget = 0;
-      renderPassColorAttachment.loadOp = WGPULoadOp_Clear;
-      renderPassColorAttachment.storeOp = WGPUStoreOp_Store;
-      renderPassColorAttachment.clearValue = (WGPUColor){ 0.9, 0.1, 0.2, 1.0 };
-      renderPassDesc.colorAttachmentCount = 1;
-      renderPassDesc.colorAttachments = &renderPassColorAttachment;
-      renderPassDesc.depthStencilAttachment = 0;
-      renderPassDesc.timestampWriteCount = 0;
-      renderPassDesc.timestampWrites = 0;
       WGPURenderPassEncoder renderPass =
         wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
       wgpuRenderPassEncoderSetPipeline(renderPass, pipeline);
       wgpuRenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
       wgpuRenderPassEncoderEnd(renderPass);
       wgpuTextureViewRelease(nextTexture);
-      WGPUCommandBufferDescriptor cmdBufferDescriptor = {};
-      cmdBufferDescriptor.nextInChain = 0;
-      cmdBufferDescriptor.label = "Command buffer";
+      WGPUCommandBufferDescriptor cmdBufferDescriptor = {
+        .nextInChain = 0,
+        .label = "Command buffer",
+      };
       WGPUCommandBuffer command = wgpuCommandEncoderFinish(encoder, &cmdBufferDescriptor);
       wgpuCommandEncoderRelease(encoder);
       wgpuQueueSubmit(queue, 1, &command);
@@ -177,7 +184,7 @@ bool basic3d_triangle() {
     wgpuInstanceRelease(instance);
     glfwDestroyWindow(window);
     glfwTerminate();
-    result = EXIT_SUCCESS;
+    result = true;
   }
   return result;
 }

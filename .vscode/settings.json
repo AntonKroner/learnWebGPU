@@ -29,6 +29,7 @@
 	},
 	"cSpell.words": [
 		"glfw",
+		"multisample",
 		"Uncaptured",
 		"wgpu",
 		"WGSL",

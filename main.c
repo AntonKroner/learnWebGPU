@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <getopt.h>
-#include "01basic3d/basic3d.h"
+#include "./01basic3d/basic3d.h"
 
 int main(int argc, char* argv[static argc + 1]) {
   int result = EXIT_FAILURE;
@@ -27,6 +27,6 @@ int main(int argc, char* argv[static argc + 1]) {
         printf("input: %s\n", optarg);
     }
   }
-  basic3d_triangle();
+  basic3d_buffers();
   return result;
 }
