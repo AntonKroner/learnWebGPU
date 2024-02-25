@@ -1,10 +1,12 @@
 #ifndef device_H_
 #define device_H_
 
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 #include "library/webgpu.h"
+#include <string.h>
 
 typedef struct {
     WGPUDevice device;
@@ -67,7 +69,7 @@ static char* readFile(const char* filename) {
 WGPUShaderModule device_ShaderModule(WGPUDevice device, const char* path) {
   char* shader = readFile(path);
   if (!shader) {
-    fprintf(stderr, "Error opening %s: ", path);
+    fprintf(stderr, "Error opening %s: %s\n", path, strerror(errno));
     return 0;
   }
   WGPUShaderModuleWGSLDescriptor shaderCodeDescriptor = {

@@ -8,4 +8,6 @@ bool basic3d_geometry_vertex();
 bool basic3d_geometry_attributes();
 bool basic3d_geometry_index();
 
+bool basic3d_uniforms_first();
+
 #endif // basic3d_H_
