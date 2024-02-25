@@ -39,6 +39,7 @@ WGPUDevice device_request(WGPUAdapter adapter, const WGPUDeviceDescriptor* descr
   wgpuDeviceSetUncapturedErrorCallback(userData.device, onDeviceError, 0);
   return userData.device;
 }
+
 void device_inspect(WGPUDevice device) {
   size_t featureCount = wgpuDeviceEnumerateFeatures(device, 0);
   WGPUFeatureName* features = calloc(featureCount, sizeof(*features));

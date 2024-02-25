@@ -11,6 +11,7 @@ add_executable(webgpu.exe
 	device.c
 	01basic3d/triangle.c
 	01basic3d/buffers.c
+	01basic3d/vertex.c
 )
 set_target_properties(webgpu.exe PROPERTIES
     C_STANDARD 23
