@@ -39,7 +39,49 @@ WGPUDevice device_request(WGPUAdapter adapter, const WGPUDeviceDescriptor* descr
   wgpuDeviceSetUncapturedErrorCallback(userData.device, onDeviceError, 0);
   return userData.device;
 }
-
+static char* readFile(const char* filename) {
+  char* result = 0;
+  FILE* input = fopen(filename, "rb");
+  if (!input) {
+    result = 0;
+  }
+  else {
+    const size_t maxSize = 10 * 1024 * 1024;
+    size_t size = BUFSIZ;
+    result = (char*)malloc(size * sizeof(*result));
+    size_t total = 0;
+    while (!feof(input) && !ferror(input) && (maxSize > size)) {
+      if (total + BUFSIZ > size) {
+        size = size * 2;
+        result = (char*)realloc(result, size);
+      }
+      char* buffer = result + total;
+      total += fread(buffer, 1, BUFSIZ, input);
+    }
+    fclose(input);
+    result = (char*)realloc(result, total + 1);
+    result[total] = '\0';
+  }
+  return result;
+}
+WGPUShaderModule device_ShaderModule(WGPUDevice device, const char* path) {
+  char* shader = readFile(path);
+  if (!shader) {
+    fprintf(stderr, "Error opening %s: ", path);
+    return 0;
+  }
+  WGPUShaderModuleWGSLDescriptor shaderCodeDescriptor = {
+    .chain.next = 0,
+    .chain.sType = WGPUSType_ShaderModuleWGSLDescriptor,
+    .code = shader,
+  };
+  WGPUShaderModuleDescriptor shaderDescriptor = {
+    .nextInChain = &shaderCodeDescriptor.chain,
+  };
+  WGPUShaderModule result = wgpuDeviceCreateShaderModule(device, &shaderDescriptor);
+  free(shader);
+  return result;
+}
 void device_inspect(WGPUDevice device) {
   size_t featureCount = wgpuDeviceEnumerateFeatures(device, 0);
   WGPUFeatureName* features = calloc(featureCount, sizeof(*features));

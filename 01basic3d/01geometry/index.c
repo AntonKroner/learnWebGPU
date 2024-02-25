@@ -1,19 +1,19 @@
-#include "basic3d.h"
+#include "../basic3d.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include "../library/glfw/include/GLFW/glfw3.h"
-#include "../library/webgpu.h"
-#include "../library/glfw3webgpu/glfw3webgpu.h"
-#include "../adapter.h"
-#include "../device.h"
+#include "../../library/glfw/include/GLFW/glfw3.h"
+#include "../../library/webgpu.h"
+#include "../../library/glfw3webgpu/glfw3webgpu.h"
+#include "../../adapter.h"
+#include "../../device.h"
 
 static bool setWindowHints() {
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
   return true;
 }
-bool basic3d_triangle() {
+bool basic3d_geometry_index() {
   bool result = false;
   WGPUInstanceDescriptor descriptor = { .nextInChain = 0 };
   WGPUInstance instance = 0;
@@ -40,15 +40,72 @@ bool basic3d_triangle() {
       .compatibleSurface = surface,
     };
     WGPUAdapter adapter = adapter_request(instance, &adapterOptions);
+    WGPUSupportedLimits supported = { .nextInChain = 0 };
+    wgpuAdapterGetLimits(adapter, &supported);
+    WGPURequiredLimits required = { .nextInChain = 0, .limits = supported.limits };
+    required.limits.maxVertexAttributes = 1;
+    required.limits.maxVertexBuffers = 2;
+    required.limits.maxBufferSize = 6 * 3 * sizeof(float);
+    required.limits.maxVertexBufferArrayStride = 3 * sizeof(float);
+    required.limits.maxInterStageShaderComponents = 3;
+
     WGPUDeviceDescriptor deviceDescriptor = {
       .nextInChain = 0,
       .label = "Device 1",
       .requiredFeaturesCount = 0,
-      .requiredLimits = 0,
+      .requiredLimits = &required,
       .defaultQueue = { .label = "default queueuue" }
     };
     WGPUDevice device = device_request(adapter, &deviceDescriptor);
     WGPUQueue queue = wgpuDeviceGetQueue(device);
+
+    float coordinates[] = {
+      -0.5, -0.5, // A
+      +0.5, -0.5, +0.5, +0.5, // C
+      -0.5, +0.5,
+    };
+    const size_t coordinatesLength = sizeof(coordinates) / sizeof(typeof(*coordinates));
+    WGPUBufferDescriptor coordinateBufferDescriptor = {
+      .nextInChain = 0,
+      .label = "coordinateBuffer",
+      .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex,
+      .size = coordinatesLength * sizeof(float),
+      .mappedAtCreation = false,
+    };
+    WGPUBuffer coordinateBuffer =
+      wgpuDeviceCreateBuffer(device, &coordinateBufferDescriptor);
+    wgpuQueueWriteBuffer(
+      queue,
+      coordinateBuffer,
+      0,
+      coordinates,
+      coordinateBufferDescriptor.size);
+    uint16_t indexes[] = {
+      0, 1, 2, // Triangle #0
+      0, 2, 3 // Triangle #1
+    };
+    const size_t indexLength = sizeof(indexes) / sizeof(typeof(*indexes));
+    WGPUBufferDescriptor indexBufferDescriptor = {
+      .nextInChain = 0,
+      .label = "indexBuffer",
+      .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Index,
+      .size = indexLength * sizeof(uint16_t),
+      .mappedAtCreation = false,
+    };
+    WGPUBuffer indexBuffer = wgpuDeviceCreateBuffer(device, &indexBufferDescriptor);
+    wgpuQueueWriteBuffer(queue, indexBuffer, 0, indexes, indexBufferDescriptor.size);
+    float colors[] = { 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,
+                       1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0 };
+    const size_t colorsLength = sizeof(colors) / sizeof(typeof(*colors));
+    WGPUBufferDescriptor colorBufferDescriptor = {
+      .nextInChain = 0,
+      .label = "colorsBuffer",
+      .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex,
+      .size = colorsLength * sizeof(float),
+      .mappedAtCreation = false,
+    };
+    WGPUBuffer colorBuffer = wgpuDeviceCreateBuffer(device, &colorBufferDescriptor);
+    wgpuQueueWriteBuffer(queue, colorBuffer, 0, colors, colorBufferDescriptor.size);
     WGPUSwapChainDescriptor swapChainDescriptor = {
       .nextInChain = 0,
       .width = 640,
@@ -60,24 +117,25 @@ bool basic3d_triangle() {
     WGPUSwapChain swapChain =
       wgpuDeviceCreateSwapChain(device, surface, &swapChainDescriptor);
     const char* const shaderSource =
+      "struct VertexInput {"
+      "  @location(0) position: vec2f,"
+      "  @location(1) color: vec3f,"
+      "};"
+      "struct VertexOutput {"
+      "  @builtin(position) position: vec4f,"
+      "  @location(0) color: vec3f,"
+      "};"
       "@vertex fn"
-      "  vs_main(@builtin(vertex_index) in_vertex_index"
-      "          : u32)"
-      "    ->@builtin(position) vec4<f32> {"
-      "  var p = vec2f(0.0, 0.0);"
-      "  if (in_vertex_index == 0u) {"
-      "    p = vec2f(-0.5, -0.5);"
-      "  }"
-      "  else if (in_vertex_index == 1u) {"
-      "    p = vec2f(0.5, -0.5);"
-      "  }"
-      "  else {"
-      "    p = vec2f(0.0, 0.5);"
-      "  }"
-      "  return vec4f(p, 0.0, 1.0);"
+      "  vs_main(in: VertexInput)"
+      "    -> VertexOutput {"
+      "  var out: VertexOutput;"
+      "  let ratio = 640.0 / 480.0;"
+      "  out.position = vec4f(in.position.x, in.position.y * ratio, 0.0, 1.0);"
+      "  out.color = in.color;"
+      "  return out;"
       "}"
-      "@fragment fn fs_main()->@location(0) vec4f {"
-      "  return vec4f(0.0, 0.4, 1.0, 1.0);"
+      "@fragment fn fs_main(in: VertexOutput)->@location(0) vec4f {"
+      "  return vec4f(in.color, 1.0);"
       "}";
     WGPUShaderModuleWGSLDescriptor shaderCodeDescriptor = {
       .chain.next = 0,
@@ -111,11 +169,37 @@ bool basic3d_triangle() {
       .targetCount = 1,
       .targets = &colorTarget,
     };
+    WGPUVertexAttribute coordinateAttribute = {
+      .shaderLocation = 0,
+      .format = WGPUVertexFormat_Float32x2,
+      .offset = 0,
+    };
+    WGPUVertexAttribute colorAttribute = {
+      .shaderLocation = 1,
+      .format = WGPUVertexFormat_Float32x3,
+      .offset = 0,
+    };
+    WGPUVertexBufferLayout bufferLayouts[2] = {
+      {
+       .attributeCount = 1,
+       .attributes = &coordinateAttribute,
+       .arrayStride = 2 * sizeof(float),
+       .stepMode = WGPUVertexStepMode_Vertex,
+       },
+      {
+       .attributeCount = 1,
+       .attributes = &colorAttribute,
+       .arrayStride = 3 * sizeof(float),
+       .stepMode = WGPUVertexStepMode_Vertex,
+       }
+    };
+    const size_t bufferLayoutLength = 2;
+
     WGPURenderPipelineDescriptor pipelineDesc = {
       .nextInChain = 0,
       .fragment = &fragmentState,
-      .vertex.bufferCount = 0,
-      .vertex.buffers = 0,
+      .vertex.bufferCount = bufferLayoutLength,
+      .vertex.buffers = bufferLayouts,
       .vertex.module = shaderModule,
       .vertex.entryPoint = "vs_main",
       .vertex.constantCount = 0,
@@ -150,7 +234,7 @@ bool basic3d_triangle() {
         .resolveTarget = 0,
         .loadOp = WGPULoadOp_Clear,
         .storeOp = WGPUStoreOp_Store,
-        .clearValue = (WGPUColor){0.9, 0.1, 0.2, 1.0},
+        .clearValue = (WGPUColor){0.05, 0.05, 0.05, 1.0},
       };
       WGPURenderPassDescriptor renderPassDesc = {
         .nextInChain = 0,
@@ -163,12 +247,30 @@ bool basic3d_triangle() {
       WGPURenderPassEncoder renderPass =
         wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
       wgpuRenderPassEncoderSetPipeline(renderPass, pipeline);
-      wgpuRenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
+      wgpuRenderPassEncoderSetVertexBuffer(
+        renderPass,
+        0,
+        coordinateBuffer,
+        0,
+        coordinatesLength * sizeof(float));
+      wgpuRenderPassEncoderSetVertexBuffer(
+        renderPass,
+        1,
+        colorBuffer,
+        0,
+        colorsLength * sizeof(float));
+      wgpuRenderPassEncoderSetIndexBuffer(
+        renderPass,
+        indexBuffer,
+        WGPUIndexFormat_Uint16,
+        0,
+        indexLength * sizeof(uint16_t));
+      wgpuRenderPassEncoderDrawIndexed(renderPass, indexLength, 1, 0, 0, 0);
       wgpuRenderPassEncoderEnd(renderPass);
       wgpuTextureViewRelease(nextTexture);
       WGPUCommandBufferDescriptor cmdBufferDescriptor = {
         .nextInChain = 0,
-        .label = "Command buffer",
+        .label = "Command coordinateBuffer",
       };
       WGPUCommandBuffer command = wgpuCommandEncoderFinish(encoder, &cmdBufferDescriptor);
       wgpuCommandEncoderRelease(encoder);

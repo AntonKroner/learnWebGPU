@@ -1,19 +1,19 @@
-#include "basic3d.h"
+#include "../basic3d.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include "../library/glfw/include/GLFW/glfw3.h"
-#include "../library/webgpu.h"
-#include "../library/glfw3webgpu/glfw3webgpu.h"
-#include "../adapter.h"
-#include "../device.h"
+#include "../../library/glfw/include/GLFW/glfw3.h"
+#include "../../library/webgpu.h"
+#include "../../library/glfw3webgpu/glfw3webgpu.h"
+#include "../../adapter.h"
+#include "../../device.h"
 
 static bool setWindowHints() {
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
   return true;
 }
-bool basic3d_vertex() {
+bool basic3d_geometry_attributes() {
   bool result = false;
   WGPUInstanceDescriptor descriptor = { .nextInChain = 0 };
   WGPUInstance instance = 0;
@@ -44,9 +44,10 @@ bool basic3d_vertex() {
     wgpuAdapterGetLimits(adapter, &supported);
     WGPURequiredLimits required = { .nextInChain = 0, .limits = supported.limits };
     required.limits.maxVertexAttributes = 1;
-    required.limits.maxVertexBuffers = 1;
-    required.limits.maxBufferSize = 6 * 2 * sizeof(float);
-    required.limits.maxVertexBufferArrayStride = 2 * sizeof(float);
+    required.limits.maxVertexBuffers = 2;
+    required.limits.maxBufferSize = 6 * 3 * sizeof(float);
+    required.limits.maxVertexBufferArrayStride = 3 * sizeof(float);
+    required.limits.maxInterStageShaderComponents = 3;
 
     WGPUDeviceDescriptor deviceDescriptor = {
       .nextInChain = 0,
@@ -58,19 +59,36 @@ bool basic3d_vertex() {
     WGPUDevice device = device_request(adapter, &deviceDescriptor);
     WGPUQueue queue = wgpuDeviceGetQueue(device);
 
-    float vertices[] = { -0.5,   -0.5, +0.5,   -0.5, +0.0,   +0.5,
-                         -0.55f, -0.5, -0.05f, +0.5, -0.55f, +0.5 };
-    const size_t length = sizeof(vertices) / sizeof(typeof(*vertices));
-    WGPUBufferDescriptor bufferDescriptor = {
+    float coordinates[] = { -0.5,   -0.5, +0.5,   -0.5, +0.0,   +0.5,
+                            -0.55f, -0.5, -0.05f, +0.5, -0.55f, +0.5 };
+    const size_t coordinatesLength = sizeof(coordinates) / sizeof(typeof(*coordinates));
+    WGPUBufferDescriptor coordinateBufferDescriptor = {
       .nextInChain = 0,
-      .label = "buffer",
+      .label = "coordinateBuffer",
       .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex,
-      .size = length * sizeof(float),
+      .size = coordinatesLength * sizeof(float),
       .mappedAtCreation = false,
     };
-    WGPUBuffer buffer = wgpuDeviceCreateBuffer(device, &bufferDescriptor);
-    wgpuQueueWriteBuffer(queue, buffer, 0, vertices, bufferDescriptor.size);
-
+    WGPUBuffer coordinateBuffer =
+      wgpuDeviceCreateBuffer(device, &coordinateBufferDescriptor);
+    wgpuQueueWriteBuffer(
+      queue,
+      coordinateBuffer,
+      0,
+      coordinates,
+      coordinateBufferDescriptor.size);
+    float colors[] = { 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,
+                       1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0 };
+    const size_t colorsLength = sizeof(colors) / sizeof(typeof(*colors));
+    WGPUBufferDescriptor colorBufferDescriptor = {
+      .nextInChain = 0,
+      .label = "colorsBuffer",
+      .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex,
+      .size = colorsLength * sizeof(float),
+      .mappedAtCreation = false,
+    };
+    WGPUBuffer colorBuffer = wgpuDeviceCreateBuffer(device, &colorBufferDescriptor);
+    wgpuQueueWriteBuffer(queue, colorBuffer, 0, colors, colorBufferDescriptor.size);
     WGPUSwapChainDescriptor swapChainDescriptor = {
       .nextInChain = 0,
       .width = 640,
@@ -82,14 +100,24 @@ bool basic3d_vertex() {
     WGPUSwapChain swapChain =
       wgpuDeviceCreateSwapChain(device, surface, &swapChainDescriptor);
     const char* const shaderSource =
+      "struct VertexInput {"
+      "  @location(0) position: vec2f,"
+      "  @location(1) color: vec3f,"
+      "};"
+      "struct VertexOutput {"
+      "  @builtin(position) position: vec4f,"
+      "  @location(0) color: vec3f,"
+      "};"
       "@vertex fn"
-      "  vs_main(@location(0) position"
-      "          : vec2f)"
-      "    ->@builtin(position) vec4<f32> {"
-      "  return vec4f(position, 0.0, 1.0);"
+      "  vs_main(in: VertexInput)"
+      "    -> VertexOutput {"
+      "  var out: VertexOutput;"
+      "  out.position = vec4f(in.position, 0.0, 1.0);"
+      "  out.color = in.color;"
+      "  return out;"
       "}"
-      "@fragment fn fs_main()->@location(0) vec4f {"
-      "  return vec4f(0.0, 0.4, 1.0, 1.0);"
+      "@fragment fn fs_main(in: VertexOutput)->@location(0) vec4f {"
+      "  return vec4f(in.color, 1.0);"
       "}";
     WGPUShaderModuleWGSLDescriptor shaderCodeDescriptor = {
       .chain.next = 0,
@@ -123,23 +151,37 @@ bool basic3d_vertex() {
       .targetCount = 1,
       .targets = &colorTarget,
     };
-    WGPUVertexAttribute vertexAttribute = {
+    WGPUVertexAttribute coordinateAttribute = {
       .shaderLocation = 0,
       .format = WGPUVertexFormat_Float32x2,
       .offset = 0,
     };
-    WGPUVertexBufferLayout bufferLayout = {
-      .attributeCount = 1,
-      .attributes = &vertexAttribute,
-      .arrayStride = 2 * sizeof(float),
-      .stepMode = WGPUVertexStepMode_Vertex,
+    WGPUVertexAttribute colorAttribute = {
+      .shaderLocation = 1,
+      .format = WGPUVertexFormat_Float32x3,
+      .offset = 0,
     };
+    WGPUVertexBufferLayout bufferLayouts[2] = {
+      {
+       .attributeCount = 1,
+       .attributes = &coordinateAttribute,
+       .arrayStride = 2 * sizeof(float),
+       .stepMode = WGPUVertexStepMode_Vertex,
+       },
+      {
+       .attributeCount = 1,
+       .attributes = &colorAttribute,
+       .arrayStride = 3 * sizeof(float),
+       .stepMode = WGPUVertexStepMode_Vertex,
+       }
+    };
+    const size_t bufferLayoutLength = 2;
 
     WGPURenderPipelineDescriptor pipelineDesc = {
       .nextInChain = 0,
       .fragment = &fragmentState,
-      .vertex.bufferCount = 1,
-      .vertex.buffers = &bufferLayout,
+      .vertex.bufferCount = bufferLayoutLength,
+      .vertex.buffers = bufferLayouts,
       .vertex.module = shaderModule,
       .vertex.entryPoint = "vs_main",
       .vertex.constantCount = 0,
@@ -174,7 +216,7 @@ bool basic3d_vertex() {
         .resolveTarget = 0,
         .loadOp = WGPULoadOp_Clear,
         .storeOp = WGPUStoreOp_Store,
-        .clearValue = (WGPUColor){0.9, 0.1, 0.2, 1.0},
+        .clearValue = (WGPUColor){0.05, 0.05, 0.05, 1.0},
       };
       WGPURenderPassDescriptor renderPassDesc = {
         .nextInChain = 0,
@@ -190,15 +232,21 @@ bool basic3d_vertex() {
       wgpuRenderPassEncoderSetVertexBuffer(
         renderPass,
         0,
-        buffer,
+        coordinateBuffer,
         0,
-        length * sizeof(float));
-      wgpuRenderPassEncoderDraw(renderPass, length / 2, 1, 0, 0);
+        coordinatesLength * sizeof(float));
+      wgpuRenderPassEncoderSetVertexBuffer(
+        renderPass,
+        1,
+        colorBuffer,
+        0,
+        colorsLength * sizeof(float));
+      wgpuRenderPassEncoderDraw(renderPass, coordinatesLength / 2, 1, 0, 0);
       wgpuRenderPassEncoderEnd(renderPass);
       wgpuTextureViewRelease(nextTexture);
       WGPUCommandBufferDescriptor cmdBufferDescriptor = {
         .nextInChain = 0,
-        .label = "Command buffer",
+        .label = "Command coordinateBuffer",
       };
       WGPUCommandBuffer command = wgpuCommandEncoderFinish(encoder, &cmdBufferDescriptor);
       wgpuCommandEncoderRelease(encoder);

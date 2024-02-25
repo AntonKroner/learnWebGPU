@@ -1,12 +1,12 @@
-#include "basic3d.h"
+#include "../basic3d.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include "../library/glfw/include/GLFW/glfw3.h"
-#include "../library/webgpu.h"
-#include "../library/glfw3webgpu/glfw3webgpu.h"
-#include "../adapter.h"
-#include "../device.h"
+#include "../../library/glfw/include/GLFW/glfw3.h"
+#include "../../library/webgpu.h"
+#include "../../library/glfw3webgpu/glfw3webgpu.h"
+#include "../../adapter.h"
+#include "../../device.h"
 
 static bool setWindowHints() {
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -32,7 +32,7 @@ static void onBuffer2Mapped(WGPUBufferMapAsyncStatus status, void* data) {
     printf("failed buffer mapped\n");
   }
 }
-bool basic3d_buffers() {
+bool basic3d_geometry_buffers() {
   bool result = false;
   WGPUInstanceDescriptor descriptor = { .nextInChain = 0 };
   WGPUInstance instance = 0;

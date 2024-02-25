@@ -4,20 +4,26 @@ project(
     VERSION 0.1.0
     LANGUAGES C CXX
 )
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_executable(webgpu.exe
 	main.c
 	adapter.c
 	device.c
-	01basic3d/triangle.c
-	01basic3d/buffers.c
-	01basic3d/vertex.c
-	01basic3d/attributes.c
+	01basic3d/01geometry/triangle.c
+	01basic3d/01geometry/buffers.c
+	01basic3d/01geometry/vertex.c
+	01basic3d/01geometry/attributes.c
+	01basic3d/01geometry/index.c
 )
 set_target_properties(webgpu.exe PROPERTIES
     C_STANDARD 23
     COMPILE_WARNING_AS_ERROR ON
 )
+target_compile_definitions(webgpu.exe PRIVATE
+    RESOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources"
+)
+
 
 if (NOT EMSCRIPTEN)
 add_subdirectory(library/glfw)
