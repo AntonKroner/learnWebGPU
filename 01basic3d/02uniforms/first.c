@@ -7,6 +7,43 @@
 #include "../../library/glfw3webgpu/glfw3webgpu.h"
 #include "../../adapter.h"
 #include "../../device.h"
+typedef float Point[2];
+static Point points[] = {
+  {  0.5,   0.0},
+  {  1.0, 0.866},
+  {  0.0, 0.866},
+  { 0.75, 0.433},
+  { 1.25, 0.433},
+  {  1.0, 0.866},
+  {  1.0,   0.0},
+  { 1.25, 0.433},
+  { 0.75, 0.433},
+  { 1.25, 0.433},
+  {1.375,  0.65},
+  {1.125,  0.65},
+  {1.125,  0.65},
+  {1.375,  0.65},
+  { 1.25, 0.866}
+};
+typedef float Color[3];
+static Color colors[] = {
+  {0.0, 0.353, 0.612},
+  {0.0, 0.353, 0.612},
+  {0.0, 0.353, 0.612},
+  {0.0,   0.4,   0.7},
+  {0.0,   0.4,   0.7},
+  {0.0,   0.4,   0.7},
+  {0.0, 0.463,   0.8},
+  {0.0, 0.463,   0.8},
+  {0.0, 0.463,   0.8},
+  {0.0, 0.525,  0.91},
+  {0.0, 0.525,  0.91},
+  {0.0, 0.525,  0.91},
+  {0.0, 0.576,   1.0},
+  {0.0, 0.576,   1.0},
+  {0.0, 0.576,   1.0}
+};
+static uint16_t indices[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 };
 
 static bool setWindowHints() {
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -27,7 +64,7 @@ bool basic3d_uniforms_first() {
   }
   else if (
     setWindowHints()
-    && !(window = glfwCreateWindow(640, 480, "Basic 3D: Hello Triangle", NULL, NULL))) {
+    && !(window = glfwCreateWindow(640, 480, "Basic 3D: First Uniform", NULL, NULL))) {
     wgpuInstanceRelease(instance);
     glfwTerminate();
     perror("Could not open window!");
@@ -43,11 +80,18 @@ bool basic3d_uniforms_first() {
     WGPUSupportedLimits supported = { .nextInChain = 0 };
     wgpuAdapterGetLimits(adapter, &supported);
     WGPURequiredLimits required = { .nextInChain = 0, .limits = supported.limits };
-    required.limits.maxVertexAttributes = 1;
+    required.limits.maxVertexAttributes = 2;
     required.limits.maxVertexBuffers = 2;
-    required.limits.maxBufferSize = 6 * 3 * sizeof(float);
-    required.limits.maxVertexBufferArrayStride = 3 * sizeof(float);
-    required.limits.maxInterStageShaderComponents = 3;
+    required.limits.maxBufferSize = 15 * 5 * sizeof(float);
+    required.limits.maxVertexBufferArrayStride = 5 * sizeof(float);
+    required.limits.minStorageBufferOffsetAlignment =
+      supported.limits.minStorageBufferOffsetAlignment;
+    required.limits.minUniformBufferOffsetAlignment =
+      supported.limits.minUniformBufferOffsetAlignment;
+    required.limits.maxInterStageShaderComponents = 5;
+    required.limits.maxBindGroups = 1;
+    required.limits.maxUniformBuffersPerShaderStage = 1;
+    required.limits.maxUniformBufferBindingSize = 16 * 4;
 
     WGPUDeviceDescriptor deviceDescriptor = {
       .nextInChain = 0,
@@ -59,17 +103,12 @@ bool basic3d_uniforms_first() {
     WGPUDevice device = device_request(adapter, &deviceDescriptor);
     WGPUQueue queue = wgpuDeviceGetQueue(device);
 
-    float coordinates[] = {
-      -0.5, -0.5, // A
-      +0.5, -0.5, +0.5, +0.5, // C
-      -0.5, +0.5,
-    };
-    const size_t coordinatesLength = sizeof(coordinates) / sizeof(typeof(*coordinates));
+    const size_t coordinatesLength = sizeof(points) / sizeof(typeof(*points));
     WGPUBufferDescriptor coordinateBufferDescriptor = {
       .nextInChain = 0,
       .label = "coordinateBuffer",
       .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex,
-      .size = coordinatesLength * sizeof(float),
+      .size = coordinatesLength * sizeof(Point),
       .mappedAtCreation = false,
     };
     WGPUBuffer coordinateBuffer =
@@ -78,34 +117,28 @@ bool basic3d_uniforms_first() {
       queue,
       coordinateBuffer,
       0,
-      coordinates,
+      points,
       coordinateBufferDescriptor.size);
-    uint16_t indexes[] = {
-      0, 1, 2, // Triangle #0
-      0, 2, 3 // Triangle #1
-    };
-    const size_t indexLength = sizeof(indexes) / sizeof(typeof(*indexes));
-    WGPUBufferDescriptor indexBufferDescriptor = {
-      .nextInChain = 0,
-      .label = "indexBuffer",
-      .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Index,
-      .size = indexLength * sizeof(uint16_t),
-      .mappedAtCreation = false,
-    };
-    WGPUBuffer indexBuffer = wgpuDeviceCreateBuffer(device, &indexBufferDescriptor);
-    wgpuQueueWriteBuffer(queue, indexBuffer, 0, indexes, indexBufferDescriptor.size);
-    float colors[] = { 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,
-                       1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0 };
     const size_t colorsLength = sizeof(colors) / sizeof(typeof(*colors));
     WGPUBufferDescriptor colorBufferDescriptor = {
       .nextInChain = 0,
       .label = "colorsBuffer",
       .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex,
-      .size = colorsLength * sizeof(float),
+      .size = colorsLength * sizeof(Color),
       .mappedAtCreation = false,
     };
     WGPUBuffer colorBuffer = wgpuDeviceCreateBuffer(device, &colorBufferDescriptor);
     wgpuQueueWriteBuffer(queue, colorBuffer, 0, colors, colorBufferDescriptor.size);
+    const size_t indexLength = sizeof(indices) / sizeof(typeof(*indices));
+    WGPUBufferDescriptor indexBufferDescriptor = {
+      .nextInChain = 0,
+      .label = "indexBuffer",
+      .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Index,
+      .size = indexLength * sizeof(uint16_t) * 2,
+      .mappedAtCreation = false,
+    };
+    WGPUBuffer indexBuffer = wgpuDeviceCreateBuffer(device, &indexBufferDescriptor);
+    wgpuQueueWriteBuffer(queue, indexBuffer, 0, indices, indexBufferDescriptor.size);
     WGPUSwapChainDescriptor swapChainDescriptor = {
       .nextInChain = 0,
       .width = 640,
@@ -155,13 +188,13 @@ bool basic3d_uniforms_first() {
       {
        .attributeCount = 1,
        .attributes = &coordinateAttribute,
-       .arrayStride = 2 * sizeof(float),
+       .arrayStride = sizeof(Point),
        .stepMode = WGPUVertexStepMode_Vertex,
        },
       {
        .attributeCount = 1,
        .attributes = &colorAttribute,
-       .arrayStride = 3 * sizeof(float),
+       .arrayStride = sizeof(Color),
        .stepMode = WGPUVertexStepMode_Vertex,
        }
     };
@@ -224,13 +257,13 @@ bool basic3d_uniforms_first() {
         0,
         coordinateBuffer,
         0,
-        coordinatesLength * sizeof(float));
+        coordinatesLength * sizeof(Point));
       wgpuRenderPassEncoderSetVertexBuffer(
         renderPass,
         1,
         colorBuffer,
         0,
-        colorsLength * sizeof(float));
+        colorsLength * sizeof(Color));
       wgpuRenderPassEncoderSetIndexBuffer(
         renderPass,
         indexBuffer,

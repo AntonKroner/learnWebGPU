@@ -27,6 +27,6 @@ int main(int argc, char* argv[static argc + 1]) {
         printf("input: %s\n", optarg);
     }
   }
-  basic3d_geometry_vertex();
+  basic3d_uniforms_first();
   return result;
 }
