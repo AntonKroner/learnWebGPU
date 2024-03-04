@@ -250,6 +250,7 @@ bool basic3d_geometry_index() {
       wgpuQueueSubmit(queue, 1, &command);
       wgpuCommandBufferRelease(command);
       wgpuSwapChainPresent(swapChain);
+      wgpuDeviceTick(device);
     }
     wgpuQueueRelease(queue);
     wgpuSwapChainRelease(swapChain);

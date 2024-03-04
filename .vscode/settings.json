@@ -30,6 +30,7 @@
 	"cSpell.words": [
 		"glfw",
 		"multisample",
+		"multisampled",
 		"Renderable",
 		"Uncaptured",
 		"wgpu",

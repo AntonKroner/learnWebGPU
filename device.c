@@ -33,6 +33,7 @@ static void onDeviceError(WGPUErrorType type, const char* message, void* /* pUse
     printf("%s ", message);
   }
   printf("\n");
+  abort();
 }
 WGPUDevice device_request(WGPUAdapter adapter, const WGPUDeviceDescriptor* descriptor) {
   DeviceData userData = { .device = 0, .requestEnded = 0 };
@@ -79,6 +80,7 @@ WGPUShaderModule device_ShaderModule(WGPUDevice device, const char* path) {
   };
   WGPUShaderModuleDescriptor shaderDescriptor = {
     .nextInChain = &shaderCodeDescriptor.chain,
+    .label = path,
   };
   WGPUShaderModule result = wgpuDeviceCreateShaderModule(device, &shaderDescriptor);
   free(shader);

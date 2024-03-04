@@ -103,6 +103,65 @@ bool basic3d_uniforms_first() {
     WGPUDevice device = device_request(adapter, &deviceDescriptor);
     WGPUQueue queue = wgpuDeviceGetQueue(device);
 
+    WGPUBufferDescriptor uniformBufferDescriptor = {
+      .nextInChain = 0,
+      .label = "uniformBuffer",
+      .size = sizeof(float),
+      .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform,
+      .mappedAtCreation = false
+    };
+
+    WGPUBuffer uniformBuffer = wgpuDeviceCreateBuffer(device, &uniformBufferDescriptor);
+    float time = 0.0f;
+
+    WGPUBindGroupLayoutEntry bindingLayout = {
+      .buffer.nextInChain = 0,
+      .buffer.type = WGPUBufferBindingType_Uniform,
+      .buffer.minBindingSize = sizeof(float),
+      .buffer.hasDynamicOffset = false,
+      .sampler.nextInChain = 0,
+      .sampler.type = WGPUSamplerBindingType_Undefined,
+      .storageTexture.nextInChain = 0,
+      .storageTexture.access = WGPUStorageTextureAccess_Undefined,
+      .storageTexture.format = WGPUTextureFormat_Undefined,
+      .storageTexture.viewDimension = WGPUTextureViewDimension_Undefined,
+      .texture.nextInChain = 0,
+      .texture.multisampled = false,
+      .texture.sampleType = WGPUTextureSampleType_Undefined,
+      .texture.viewDimension = WGPUTextureViewDimension_Undefined,
+      .binding = 0,
+      .visibility = WGPUShaderStage_Vertex,
+    };
+    WGPUBindGroupLayoutDescriptor bindGroupLayoutDescriptor = {
+      .nextInChain = 0,
+      .entryCount = 1,
+      .entries = &bindingLayout,
+    };
+    WGPUBindGroupLayout bindGroupLayout =
+      wgpuDeviceCreateBindGroupLayout(device, &bindGroupLayoutDescriptor);
+    WGPUPipelineLayoutDescriptor layoutDescriptor = {
+      .nextInChain = 0,
+      .bindGroupLayoutCount = 1,
+      .bindGroupLayouts = &bindGroupLayout,
+    };
+    WGPUPipelineLayout layout = wgpuDeviceCreatePipelineLayout(device, &layoutDescriptor);
+
+    WGPUBindGroupEntry binding = {
+      .nextInChain = 0,
+      .binding = 0,
+      .buffer = uniformBuffer,
+      .offset = 0,
+      .size = sizeof(float),
+    };
+    WGPUBindGroupDescriptor bindGroupDescriptor = {
+      .nextInChain = 0,
+      .layout = bindGroupLayout,
+      .entryCount = bindGroupLayoutDescriptor.entryCount,
+      .entries = &binding,
+    };
+
+    WGPUBindGroup bindGroup = wgpuDeviceCreateBindGroup(device, &bindGroupDescriptor);
+
     const size_t coordinatesLength = sizeof(points) / sizeof(typeof(*points));
     WGPUBufferDescriptor coordinateBufferDescriptor = {
       .nextInChain = 0,
@@ -217,7 +276,7 @@ bool basic3d_uniforms_first() {
       .multisample.count = 1,
       .multisample.mask = ~0u,
       .multisample.alphaToCoverageEnabled = false,
-      .layout = 0,
+      .layout = layout,
     };
     WGPURenderPipeline pipeline = wgpuDeviceCreateRenderPipeline(device, &pipelineDesc);
 
@@ -228,6 +287,10 @@ bool basic3d_uniforms_first() {
         perror("Cannot acquire next swap chain texture\n");
         break;
       }
+
+      time = (float)glfwGetTime();
+      wgpuQueueWriteBuffer(queue, uniformBuffer, 0, &time, sizeof(float));
+
       WGPUCommandEncoderDescriptor commandEncoderDesc = {
         .nextInChain = 0,
         .label = "Command Encoder",
@@ -270,6 +333,7 @@ bool basic3d_uniforms_first() {
         WGPUIndexFormat_Uint16,
         0,
         indexLength * sizeof(uint16_t));
+      wgpuRenderPassEncoderSetBindGroup(renderPass, 0, bindGroup, 0, 0);
       wgpuRenderPassEncoderDrawIndexed(renderPass, indexLength, 1, 0, 0, 0);
       wgpuRenderPassEncoderEnd(renderPass);
       wgpuTextureViewRelease(nextTexture);
@@ -282,6 +346,7 @@ bool basic3d_uniforms_first() {
       wgpuQueueSubmit(queue, 1, &command);
       wgpuCommandBufferRelease(command);
       wgpuSwapChainPresent(swapChain);
+      wgpuDeviceTick(device);
     }
     wgpuQueueRelease(queue);
     wgpuSwapChainRelease(swapChain);
