@@ -10,5 +10,6 @@ bool basic3d_geometry_index();
 
 bool basic3d_uniforms_first();
 bool basic3d_uniforms_more();
+bool basic3d_uniforms_dynamic();
 
 #endif // basic3d_H_

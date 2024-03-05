@@ -1,4 +1,5 @@
 #include "../basic3d.h"
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -44,19 +45,22 @@ static Color colors[] = {
   {0.0, 0.576,   1.0}
 };
 static uint16_t indices[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 };
-
 typedef struct {
     float color[4];
     float time;
     float _pad[3];
 } Uniforms;
 
+uint32_t ceilToNextMultiple(uint32_t value, uint32_t step) {
+  uint32_t divide_and_ceil = value / step + (value % step == 0 ? 0 : 1);
+  return step * divide_and_ceil;
+}
 static bool setWindowHints() {
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
   return true;
 }
-bool basic3d_uniforms_more() {
+bool basic3d_uniforms_dynamic() {
   bool result = false;
   WGPUInstanceDescriptor descriptor = { .nextInChain = 0 };
   WGPUInstance instance = 0;
@@ -98,6 +102,7 @@ bool basic3d_uniforms_more() {
     required.limits.maxBindGroups = 1;
     required.limits.maxUniformBuffersPerShaderStage = 1;
     required.limits.maxUniformBufferBindingSize = 16 * 4;
+    required.limits.maxDynamicUniformBuffersPerPipelineLayout = 1;
 
     WGPUDeviceDescriptor deviceDescriptor = {
       .nextInChain = 0,
@@ -109,14 +114,18 @@ bool basic3d_uniforms_more() {
     WGPUDevice device = device_request(adapter, &deviceDescriptor);
     WGPUQueue queue = wgpuDeviceGetQueue(device);
 
+    uint32_t uniformStride = ceilToNextMultiple(
+      (uint32_t)sizeof(Uniforms),
+      (uint32_t)supported.limits.minUniformBufferOffsetAlignment);
+    uint32_t dynamicOffset = 0;
+
     WGPUBufferDescriptor uniformBufferDescriptor = {
       .nextInChain = 0,
       .label = "uniformBuffer",
-      .size = sizeof(Uniforms),
+      .size = uniformStride + sizeof(Uniforms),
       .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform,
       .mappedAtCreation = false
     };
-
     WGPUBuffer uniformBuffer = wgpuDeviceCreateBuffer(device, &uniformBufferDescriptor);
     Uniforms uniforms = {
       .time = 0.0f,
@@ -127,7 +136,7 @@ bool basic3d_uniforms_more() {
       .buffer.nextInChain = 0,
       .buffer.type = WGPUBufferBindingType_Uniform,
       .buffer.minBindingSize = sizeof(Uniforms),
-      .buffer.hasDynamicOffset = false,
+      .buffer.hasDynamicOffset = true,
       .sampler.nextInChain = 0,
       .sampler.type = WGPUSamplerBindingType_Undefined,
       .storageTexture.nextInChain = 0,
@@ -298,21 +307,20 @@ bool basic3d_uniforms_more() {
       }
 
       uniforms.time = (float)glfwGetTime();
+      uniforms.color[0] = 1.0f;
+      uniforms.color[1] = 0.5f;
+      uniforms.color[2] = 0.0f;
+      wgpuQueueWriteBuffer(queue, uniformBuffer, 0, &uniforms, sizeof(Uniforms));
+      uniforms.time *= -1.0f;
+      uniforms.color[0] = 0.5f;
+      uniforms.color[1] = 1.0f;
+      uniforms.color[2] = 0.5f;
       wgpuQueueWriteBuffer(
         queue,
         uniformBuffer,
-        sizeof(uniforms.color),
-        &uniforms.time,
-        sizeof(float));
-      uniforms.color[0] = 1.0f * uniforms.time;
-      uniforms.color[1] = 0.5f * uniforms.time;
-      uniforms.color[2] = 0.0f * uniforms.time;
-      wgpuQueueWriteBuffer(
-        queue,
-        uniformBuffer,
-        0,
-        &uniforms.color,
-        sizeof(uniforms.color));
+        uniformStride,
+        &uniforms,
+        sizeof(Uniforms));
 
       WGPUCommandEncoderDescriptor commandEncoderDesc = {
         .nextInChain = 0,
@@ -356,7 +364,11 @@ bool basic3d_uniforms_more() {
         WGPUIndexFormat_Uint16,
         0,
         indexLength * sizeof(uint16_t));
-      wgpuRenderPassEncoderSetBindGroup(renderPass, 0, bindGroup, 0, 0);
+      dynamicOffset = 0;
+      wgpuRenderPassEncoderSetBindGroup(renderPass, 0, bindGroup, 1, &dynamicOffset);
+      wgpuRenderPassEncoderDrawIndexed(renderPass, indexLength, 1, 0, 0, 0);
+      dynamicOffset = 1 * uniformStride;
+      wgpuRenderPassEncoderSetBindGroup(renderPass, 0, bindGroup, 1, &dynamicOffset);
       wgpuRenderPassEncoderDrawIndexed(renderPass, indexLength, 1, 0, 0, 0);
       wgpuRenderPassEncoderEnd(renderPass);
       wgpuTextureViewRelease(nextTexture);
