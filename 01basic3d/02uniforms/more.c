@@ -45,12 +45,18 @@ static Color colors[] = {
 };
 static uint16_t indices[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 };
 
+typedef struct {
+    float color[4];
+    float time;
+		float _pad[3]
+} Uniforms;
+
 static bool setWindowHints() {
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
   return true;
 }
-bool basic3d_uniforms_first() {
+bool basic3d_uniforms_more() {
   bool result = false;
   WGPUInstanceDescriptor descriptor = { .nextInChain = 0 };
   WGPUInstance instance = 0;
@@ -106,18 +112,21 @@ bool basic3d_uniforms_first() {
     WGPUBufferDescriptor uniformBufferDescriptor = {
       .nextInChain = 0,
       .label = "uniformBuffer",
-      .size = sizeof(float),
+      .size = sizeof(Uniforms),
       .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform,
       .mappedAtCreation = false
     };
 
     WGPUBuffer uniformBuffer = wgpuDeviceCreateBuffer(device, &uniformBufferDescriptor);
-    float time = 0.0f;
+    Uniforms uniforms = {
+      .time = 0.0f,
+      .color = {0.0f, 1.0f, 0.4f, 1.0f},
+    };
 
     WGPUBindGroupLayoutEntry bindingLayout = {
       .buffer.nextInChain = 0,
       .buffer.type = WGPUBufferBindingType_Uniform,
-      .buffer.minBindingSize = sizeof(float),
+      .buffer.minBindingSize = sizeof(Uniforms),
       .buffer.hasDynamicOffset = false,
       .sampler.nextInChain = 0,
       .sampler.type = WGPUSamplerBindingType_Undefined,
@@ -130,7 +139,7 @@ bool basic3d_uniforms_first() {
       .texture.sampleType = WGPUTextureSampleType_Undefined,
       .texture.viewDimension = WGPUTextureViewDimension_Undefined,
       .binding = 0,
-      .visibility = WGPUShaderStage_Vertex,
+      .visibility = WGPUShaderStage_Vertex | WGPUShaderStage_Fragment,
     };
     WGPUBindGroupLayoutDescriptor bindGroupLayoutDescriptor = {
       .nextInChain = 0,
@@ -151,7 +160,7 @@ bool basic3d_uniforms_first() {
       .binding = 0,
       .buffer = uniformBuffer,
       .offset = 0,
-      .size = sizeof(float),
+      .size = sizeof(Uniforms),
     };
     WGPUBindGroupDescriptor bindGroupDescriptor = {
       .nextInChain = 0,
@@ -209,7 +218,7 @@ bool basic3d_uniforms_first() {
     WGPUSwapChain swapChain =
       wgpuDeviceCreateSwapChain(device, surface, &swapChainDescriptor);
     WGPUShaderModule shaderModule =
-      device_ShaderModule(device, RESOURCE_DIR "/uniforms/first.wgsl");
+      device_ShaderModule(device, RESOURCE_DIR "/uniforms/more.wgsl");
     WGPUBlendState blendState = {
       .color.srcFactor = WGPUBlendFactor_SrcAlpha,
       .color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha,
@@ -288,8 +297,22 @@ bool basic3d_uniforms_first() {
         break;
       }
 
-      time = (float)glfwGetTime();
-      wgpuQueueWriteBuffer(queue, uniformBuffer, 0, &time, sizeof(float));
+      uniforms.time = (float)glfwGetTime();
+      wgpuQueueWriteBuffer(
+        queue,
+        uniformBuffer,
+        sizeof(uniforms.color),
+        &uniforms.time,
+        sizeof(float));
+      uniforms.color[0] = 1.0f * uniforms.time;
+      uniforms.color[1] = 0.5f * uniforms.time;
+      uniforms.color[2] = 0.0f * uniforms.time;
+      wgpuQueueWriteBuffer(
+        queue,
+        uniformBuffer,
+        0,
+        &uniforms.color,
+        sizeof(uniforms.color));
 
       WGPUCommandEncoderDescriptor commandEncoderDesc = {
         .nextInChain = 0,
