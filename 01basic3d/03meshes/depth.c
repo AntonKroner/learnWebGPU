@@ -53,6 +53,9 @@ static void limitsSet(
   required->limits.maxBindGroups = 1;
   required->limits.maxUniformBuffersPerShaderStage = 1;
   required->limits.maxUniformBufferBindingSize = 16 * 4;
+  required->limits.maxTextureDimension1D = 480;
+  required->limits.maxTextureDimension2D = 640;
+  required->limits.maxTextureArrayLayers = 1;
 }
 static WGPUBindGroupLayoutEntry bindingLayoutCreate(size_t size) {
   WGPUBindGroupLayoutEntry result = {
@@ -74,23 +77,6 @@ static WGPUBindGroupLayoutEntry bindingLayoutCreate(size_t size) {
     .visibility = WGPUShaderStage_Vertex | WGPUShaderStage_Fragment,
   };
   return result;
-}
-static WGPUColorTargetState colorTargetCreate(WGPUTextureFormat format) {
-  WGPUBlendState blendState = {
-    .color.srcFactor = WGPUBlendFactor_SrcAlpha,
-    .color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha,
-    .color.operation = WGPUBlendOperation_Add,
-    .alpha.srcFactor = WGPUBlendFactor_Zero,
-    .alpha.dstFactor = WGPUBlendFactor_One,
-    .alpha.operation = WGPUBlendOperation_Add
-  };
-  WGPUColorTargetState colorTarget = {
-    .nextInChain = 0,
-    .format = format,
-    .blend = &blendState,
-    .writeMask = WGPUColorWriteMask_All,
-  };
-  return colorTarget;
 }
 static WGPUDepthStencilState depthStencilStateCreate() {
   WGPUStencilFaceState face = {
@@ -243,7 +229,20 @@ bool basic3d_meshes_depth() {
       wgpuDeviceCreateSwapChain(device, surface, &swapChainDescriptor);
     WGPUShaderModule shaderModule =
       device_ShaderModule(device, RESOURCE_DIR "/meshes/depth.wgsl");
-    WGPUColorTargetState colorTarget = colorTargetCreate(swapChainDescriptor.format);
+    WGPUBlendState blendState = {
+      .color.srcFactor = WGPUBlendFactor_SrcAlpha,
+      .color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha,
+      .color.operation = WGPUBlendOperation_Add,
+      .alpha.srcFactor = WGPUBlendFactor_Zero,
+      .alpha.dstFactor = WGPUBlendFactor_One,
+      .alpha.operation = WGPUBlendOperation_Add
+    };
+    WGPUColorTargetState colorTarget = {
+      .nextInChain = 0,
+      .format = swapChainDescriptor.format,
+      .blend = &blendState,
+      .writeMask = WGPUColorWriteMask_All,
+    };
     WGPUFragmentState fragmentState = {
       .nextInChain = 0,
       .module = shaderModule,
@@ -286,6 +285,30 @@ bool basic3d_meshes_depth() {
     depthStencilState.format = depthTextureFormat;
     depthStencilState.stencilReadMask = 0;
     depthStencilState.stencilWriteMask = 0;
+
+    WGPUTextureDescriptor depthTextureDesc = {
+      .dimension = WGPUTextureDimension_2D,
+      .format = depthTextureFormat,
+      .mipLevelCount = 1,
+      .sampleCount = 1,
+      .size = {640, 480, 1},
+      .usage = WGPUTextureUsage_RenderAttachment,
+      .viewFormatCount = 1,
+      .viewFormats = &depthTextureFormat,
+    };
+    WGPUTexture depthTexture = wgpuDeviceCreateTexture(device, &depthTextureDesc);
+    WGPUTextureViewDescriptor depthTextureViewDesc = {
+      .aspect = WGPUTextureAspect_DepthOnly,
+      .baseArrayLayer = 0,
+      .arrayLayerCount = 1,
+      .baseMipLevel = 0,
+      .mipLevelCount = 1,
+      .dimension = WGPUTextureViewDimension_2D,
+      .format = depthTextureFormat,
+    };
+    WGPUTextureView depthTextureView =
+      wgpuTextureCreateView(depthTexture, &depthTextureViewDesc);
+
     WGPURenderPipelineDescriptor pipelineDesc = {
       .nextInChain = 0,
       .fragment = &fragmentState,
@@ -342,11 +365,24 @@ bool basic3d_meshes_depth() {
         .storeOp = WGPUStoreOp_Store,
         .clearValue = (WGPUColor){0.05, 0.05, 0.05, 1.0},
       };
+
+      WGPURenderPassDepthStencilAttachment depthStencilAttachment = {
+        .view = depthTextureView,
+        .depthClearValue = 1.0f,
+        .depthLoadOp = WGPULoadOp_Clear,
+        .depthStoreOp = WGPUStoreOp_Store,
+        .depthReadOnly = false,
+        .stencilClearValue = 0,
+        .stencilLoadOp = WGPULoadOp_Undefined,
+        .stencilStoreOp = WGPUStoreOp_Undefined,
+        .stencilReadOnly = true,
+      };
+
       WGPURenderPassDescriptor renderPassDesc = {
         .nextInChain = 0,
         .colorAttachmentCount = 1,
         .colorAttachments = &renderPassColorAttachment,
-        .depthStencilAttachment = 0,
+        .depthStencilAttachment = &depthStencilAttachment,
         .timestampWriteCount = 0,
         .timestampWrites = 0,
       };
@@ -386,15 +422,25 @@ bool basic3d_meshes_depth() {
       wgpuSwapChainPresent(swapChain);
       wgpuDeviceTick(device);
     }
+    wgpuTextureViewRelease(depthTextureView);
+    wgpuTextureDestroy(depthTexture);
+    wgpuTextureRelease(depthTexture);
+
+    wgpuBufferDestroy(coordinateBuffer);
     wgpuBufferRelease(coordinateBuffer);
+    wgpuBufferDestroy(colorBuffer);
     wgpuBufferRelease(colorBuffer);
+    wgpuBufferDestroy(uniformBuffer);
     wgpuBufferRelease(uniformBuffer);
+
     wgpuQueueRelease(queue);
+    wgpuRenderPipelineRelease(pipeline);
+    wgpuShaderModuleRelease(shaderModule);
     wgpuSwapChainRelease(swapChain);
     wgpuDeviceRelease(device);
     wgpuAdapterRelease(adapter);
-    wgpuSurfaceRelease(surface);
     wgpuInstanceRelease(instance);
+    wgpuSurfaceRelease(surface);
     glfwDestroyWindow(window);
     glfwTerminate();
     result = true;

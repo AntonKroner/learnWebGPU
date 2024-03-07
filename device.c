@@ -27,8 +27,26 @@ static void device_onRequest(
   }
   userData->requestEnded = true;
 }
+static char* errorToString(WGPUErrorType error) {
+  switch (error) {
+    case WGPUErrorType_NoError:
+      return "WGPUErrorType_NoError";
+    case WGPUErrorType_Validation:
+      return "WGPUErrorType_Validation";
+    case WGPUErrorType_OutOfMemory:
+      return "WGPUErrorType_OutOfMemory";
+    case WGPUErrorType_Internal:
+      return "WGPUErrorType_Internal";
+    case WGPUErrorType_Unknown:
+      return "WGPUErrorType_Unknown";
+    case WGPUErrorType_DeviceLost:
+      return "WGPUErrorType_DeviceLost";
+    case WGPUErrorType_Force32:
+      return "WGPUErrorType_Force32";
+  }
+}
 static void onDeviceError(WGPUErrorType type, const char* message, void* /* pUserData */) {
-  printf("Uncaptured device error: type %u\n", type);
+  printf("Uncaptured device error: %s\n", errorToString(type));
   if (message) {
     printf("%s ", message);
   }
