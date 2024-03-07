@@ -27,6 +27,6 @@ int main(int argc, char* argv[static argc + 1]) {
         printf("input: %s\n", optarg);
     }
   }
-  basic3d_meshes_depth();
+  basic3d_meshes_transformation();
   return result;
 }
