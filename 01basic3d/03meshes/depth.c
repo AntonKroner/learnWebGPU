@@ -38,7 +38,83 @@ static bool setWindowHints() {
   glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
   return true;
 }
-bool basic3d_meshes_simple() {
+static void limitsSet(
+  WGPURequiredLimits required[static 1],
+  WGPUSupportedLimits supported) {
+  required->limits.maxVertexAttributes = 2;
+  required->limits.maxVertexBuffers = 2;
+  required->limits.maxBufferSize = 15 * 5 * sizeof(float);
+  required->limits.maxVertexBufferArrayStride = 5 * sizeof(float);
+  required->limits.minStorageBufferOffsetAlignment =
+    supported.limits.minStorageBufferOffsetAlignment;
+  required->limits.minUniformBufferOffsetAlignment =
+    supported.limits.minUniformBufferOffsetAlignment;
+  required->limits.maxInterStageShaderComponents = 5;
+  required->limits.maxBindGroups = 1;
+  required->limits.maxUniformBuffersPerShaderStage = 1;
+  required->limits.maxUniformBufferBindingSize = 16 * 4;
+}
+static WGPUBindGroupLayoutEntry bindingLayoutCreate(size_t size) {
+  WGPUBindGroupLayoutEntry result = {
+    .buffer.nextInChain = 0,
+    .buffer.type = WGPUBufferBindingType_Uniform,
+    .buffer.minBindingSize = size,
+    .buffer.hasDynamicOffset = false,
+    .sampler.nextInChain = 0,
+    .sampler.type = WGPUSamplerBindingType_Undefined,
+    .storageTexture.nextInChain = 0,
+    .storageTexture.access = WGPUStorageTextureAccess_Undefined,
+    .storageTexture.format = WGPUTextureFormat_Undefined,
+    .storageTexture.viewDimension = WGPUTextureViewDimension_Undefined,
+    .texture.nextInChain = 0,
+    .texture.multisampled = false,
+    .texture.sampleType = WGPUTextureSampleType_Undefined,
+    .texture.viewDimension = WGPUTextureViewDimension_Undefined,
+    .binding = 0,
+    .visibility = WGPUShaderStage_Vertex | WGPUShaderStage_Fragment,
+  };
+  return result;
+}
+static WGPUColorTargetState colorTargetCreate(WGPUTextureFormat format) {
+  WGPUBlendState blendState = {
+    .color.srcFactor = WGPUBlendFactor_SrcAlpha,
+    .color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha,
+    .color.operation = WGPUBlendOperation_Add,
+    .alpha.srcFactor = WGPUBlendFactor_Zero,
+    .alpha.dstFactor = WGPUBlendFactor_One,
+    .alpha.operation = WGPUBlendOperation_Add
+  };
+  WGPUColorTargetState colorTarget = {
+    .nextInChain = 0,
+    .format = format,
+    .blend = &blendState,
+    .writeMask = WGPUColorWriteMask_All,
+  };
+  return colorTarget;
+}
+static WGPUDepthStencilState depthStencilStateCreate() {
+  WGPUStencilFaceState face = {
+    .compare = WGPUCompareFunction_Always,
+    .failOp = WGPUStencilOperation_Keep,
+    .depthFailOp = WGPUStencilOperation_Keep,
+    .passOp = WGPUStencilOperation_Keep,
+  };
+  WGPUDepthStencilState result = {
+    .nextInChain = 0,
+    .format = WGPUTextureFormat_Undefined,
+    .depthWriteEnabled = false,
+    .depthCompare = WGPUCompareFunction_Always,
+    .stencilFront = face,
+    .stencilBack = face,
+    .stencilReadMask = 0,
+    .stencilWriteMask = 0,
+    .depthBias = 0,
+    .depthBiasSlopeScale = 0,
+    .depthBiasClamp = 0,
+  };
+  return result;
+}
+bool basic3d_meshes_depth() {
   bool result = false;
   WGPUInstanceDescriptor descriptor = { .nextInChain = 0 };
   WGPUInstance instance = 0;
@@ -68,18 +144,7 @@ bool basic3d_meshes_simple() {
     WGPUSupportedLimits supported = { .nextInChain = 0 };
     wgpuAdapterGetLimits(adapter, &supported);
     WGPURequiredLimits required = { .nextInChain = 0, .limits = supported.limits };
-    required.limits.maxVertexAttributes = 2;
-    required.limits.maxVertexBuffers = 2;
-    required.limits.maxBufferSize = 15 * 5 * sizeof(float);
-    required.limits.maxVertexBufferArrayStride = 5 * sizeof(float);
-    required.limits.minStorageBufferOffsetAlignment =
-      supported.limits.minStorageBufferOffsetAlignment;
-    required.limits.minUniformBufferOffsetAlignment =
-      supported.limits.minUniformBufferOffsetAlignment;
-    required.limits.maxInterStageShaderComponents = 5;
-    required.limits.maxBindGroups = 1;
-    required.limits.maxUniformBuffersPerShaderStage = 1;
-    required.limits.maxUniformBufferBindingSize = 16 * 4;
+    limitsSet(&required, supported);
 
     WGPUDeviceDescriptor deviceDescriptor = {
       .nextInChain = 0,
@@ -90,7 +155,6 @@ bool basic3d_meshes_simple() {
     };
     WGPUDevice device = device_request(adapter, &deviceDescriptor);
     WGPUQueue queue = wgpuDeviceGetQueue(device);
-
     WGPUBufferDescriptor uniformBufferDescriptor = {
       .nextInChain = 0,
       .label = "uniformBuffer",
@@ -98,31 +162,12 @@ bool basic3d_meshes_simple() {
       .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform,
       .mappedAtCreation = false
     };
-
     WGPUBuffer uniformBuffer = wgpuDeviceCreateBuffer(device, &uniformBufferDescriptor);
     Uniforms uniforms = {
       .time = 0.0f,
       .color = {0.0f, 1.0f, 0.4f, 1.0f},
     };
-
-    WGPUBindGroupLayoutEntry bindingLayout = {
-      .buffer.nextInChain = 0,
-      .buffer.type = WGPUBufferBindingType_Uniform,
-      .buffer.minBindingSize = sizeof(Uniforms),
-      .buffer.hasDynamicOffset = false,
-      .sampler.nextInChain = 0,
-      .sampler.type = WGPUSamplerBindingType_Undefined,
-      .storageTexture.nextInChain = 0,
-      .storageTexture.access = WGPUStorageTextureAccess_Undefined,
-      .storageTexture.format = WGPUTextureFormat_Undefined,
-      .storageTexture.viewDimension = WGPUTextureViewDimension_Undefined,
-      .texture.nextInChain = 0,
-      .texture.multisampled = false,
-      .texture.sampleType = WGPUTextureSampleType_Undefined,
-      .texture.viewDimension = WGPUTextureViewDimension_Undefined,
-      .binding = 0,
-      .visibility = WGPUShaderStage_Vertex | WGPUShaderStage_Fragment,
-    };
+    WGPUBindGroupLayoutEntry bindingLayout = bindingLayoutCreate(sizeof(Uniforms));
     WGPUBindGroupLayoutDescriptor bindGroupLayoutDescriptor = {
       .nextInChain = 0,
       .entryCount = 1,
@@ -136,7 +181,6 @@ bool basic3d_meshes_simple() {
       .bindGroupLayouts = &bindGroupLayout,
     };
     WGPUPipelineLayout layout = wgpuDeviceCreatePipelineLayout(device, &layoutDescriptor);
-
     WGPUBindGroupEntry binding = {
       .nextInChain = 0,
       .binding = 0,
@@ -150,9 +194,7 @@ bool basic3d_meshes_simple() {
       .entryCount = bindGroupLayoutDescriptor.entryCount,
       .entries = &binding,
     };
-
     WGPUBindGroup bindGroup = wgpuDeviceCreateBindGroup(device, &bindGroupDescriptor);
-
     const size_t coordinatesLength = sizeof(points) / sizeof(typeof(*points));
     WGPUBufferDescriptor coordinateBufferDescriptor = {
       .nextInChain = 0,
@@ -200,21 +242,8 @@ bool basic3d_meshes_simple() {
     WGPUSwapChain swapChain =
       wgpuDeviceCreateSwapChain(device, surface, &swapChainDescriptor);
     WGPUShaderModule shaderModule =
-      device_ShaderModule(device, RESOURCE_DIR "/meshes/simple.wgsl");
-    WGPUBlendState blendState = {
-      .color.srcFactor = WGPUBlendFactor_SrcAlpha,
-      .color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha,
-      .color.operation = WGPUBlendOperation_Add,
-      .alpha.srcFactor = WGPUBlendFactor_Zero,
-      .alpha.dstFactor = WGPUBlendFactor_One,
-      .alpha.operation = WGPUBlendOperation_Add
-    };
-    WGPUColorTargetState colorTarget = {
-      .nextInChain = 0,
-      .format = swapChainDescriptor.format,
-      .blend = &blendState,
-      .writeMask = WGPUColorWriteMask_All,
-    };
+      device_ShaderModule(device, RESOURCE_DIR "/meshes/depth.wgsl");
+    WGPUColorTargetState colorTarget = colorTargetCreate(swapChainDescriptor.format);
     WGPUFragmentState fragmentState = {
       .nextInChain = 0,
       .module = shaderModule,
@@ -250,6 +279,13 @@ bool basic3d_meshes_simple() {
     };
     const size_t bufferLayoutLength = 2;
 
+    WGPUDepthStencilState depthStencilState = depthStencilStateCreate();
+    depthStencilState.depthCompare = WGPUCompareFunction_Less;
+    depthStencilState.depthWriteEnabled = true;
+    WGPUTextureFormat depthTextureFormat = WGPUTextureFormat_Depth24Plus;
+    depthStencilState.format = depthTextureFormat;
+    depthStencilState.stencilReadMask = 0;
+    depthStencilState.stencilWriteMask = 0;
     WGPURenderPipelineDescriptor pipelineDesc = {
       .nextInChain = 0,
       .fragment = &fragmentState,
@@ -263,7 +299,7 @@ bool basic3d_meshes_simple() {
       .primitive.stripIndexFormat = WGPUIndexFormat_Undefined,
       .primitive.frontFace = WGPUFrontFace_CCW,
       .primitive.cullMode = WGPUCullMode_None,
-      .depthStencil = 0,
+      .depthStencil = &depthStencilState,
       .multisample.count = 1,
       .multisample.mask = ~0u,
       .multisample.alphaToCoverageEnabled = false,
@@ -350,6 +386,9 @@ bool basic3d_meshes_simple() {
       wgpuSwapChainPresent(swapChain);
       wgpuDeviceTick(device);
     }
+    wgpuBufferRelease(coordinateBuffer);
+    wgpuBufferRelease(colorBuffer);
+    wgpuBufferRelease(uniformBuffer);
     wgpuQueueRelease(queue);
     wgpuSwapChainRelease(swapChain);
     wgpuDeviceRelease(device);

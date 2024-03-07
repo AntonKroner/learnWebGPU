@@ -13,5 +13,6 @@ bool basic3d_uniforms_more();
 bool basic3d_uniforms_dynamic();
 
 bool basic3d_meshes_simple();
+bool basic3d_meshes_depth();
 
 #endif // basic3d_H_

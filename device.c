@@ -28,7 +28,7 @@ static void device_onRequest(
   userData->requestEnded = true;
 }
 static void onDeviceError(WGPUErrorType type, const char* message, void* /* pUserData */) {
-  printf("Uncaptured device error: type %u", type);
+  printf("Uncaptured device error: type %u\n", type);
   if (message) {
     printf("%s ", message);
   }
