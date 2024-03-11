@@ -5,24 +5,36 @@
 #include "../../library/glfw/include/GLFW/glfw3.h"
 #include "../../library/webgpu.h"
 #include "../../library/glfw3webgpu/glfw3webgpu.h"
+#define TINYOBJ_LOADER_C_IMPLEMENTATION
+#include "../../library/tinyobj_loader_c.h"
 #include "../../adapter.h"
 #include "../../device.h"
-typedef float Point[3];
-static Point points[] = {
+typedef float Vec3[3];
+static Vec3 points[] = {
   {-0.5, -0.5, -0.3},
   {+0.5, -0.5, -0.3},
   {+0.5, +0.5, -0.3},
   {-0.5, +0.5, -0.3},
   {+0.0, +0.0, +0.5}
 };
-typedef float Color[3];
-static Color colors[] = {
+static Vec3 colors[] = {
   {1.0, 1.0, 1.0},
   {1.0, 1.0, 1.0},
   {1.0, 1.0, 1.0},
   {1.0, 1.0, 1.0},
   {0.5, 0.5, 0.5},
 };
+typedef struct {
+    Vec3 position;
+    Vec3 normal;
+    Vec3 color;
+} Vertices;
+
+typedef struct {
+    Vertices* vertices;
+    size_t vertexCount;
+} Model;
+
 static uint16_t indices[] = {
   0, 1, 2, 0, 2, 3, 0, 1, 4, 1, 2, 4, 2, 3, 4, 3, 0, 4,
 };
@@ -32,6 +44,72 @@ typedef struct {
     float time;
     float _pad[3];
 } Uniforms;
+static void loadFile(
+  void* /* ctx */,
+  const char* filename,
+  const int /* is_mtl */,
+  const char* /* obj_filename */,
+  char** buffer,
+  size_t* length) {
+  long string_size = 0, read_size = 0;
+  FILE* handler = fopen(filename, "r");
+  if (handler) {
+    fseek(handler, 0, SEEK_END);
+    string_size = ftell(handler);
+    rewind(handler);
+    *buffer = (char*)malloc(sizeof(char) * (string_size + 1));
+    read_size = fread(*buffer, sizeof(char), (size_t)string_size, handler);
+    (*buffer)[string_size] = '\0';
+    if (string_size != read_size) {
+      free(*buffer);
+      *buffer = NULL;
+    }
+    fclose(handler);
+  }
+  *length = read_size;
+}
+static void modelLoad(char* const file, Model model[restrict static 1]) {
+  tinyobj_shape_t* shapes = 0;
+  tinyobj_material_t* materials = 0;
+  tinyobj_attrib_t attributes;
+  size_t shapesCount;
+  size_t materialsCount;
+  tinyobj_attrib_init(&attributes);
+  int result = tinyobj_parse_obj(
+    &attributes,
+    &shapes,
+    &shapesCount,
+    &materials,
+    &materialsCount,
+    file,
+    loadFile,
+    0,
+    TINYOBJ_FLAG_TRIANGULATE);
+  printf("result: %i\n", result);
+  for (size_t i = 0; shapesCount > i; i++) {
+    const tinyobj_shape_t shape = shapes[i];
+    printf("shape %zu: {\n\tname: %s\n", i, shape.name);
+    printf("\toffset: %u\n", shape.face_offset);
+    printf("\tlength: %u\n}\n", shape.length);
+  }
+  printf("num_vertices; %u\n", attributes.num_vertices);
+  printf("num_normals; %u\n", attributes.num_normals);
+  printf("num_texcoords; %u\n", attributes.num_texcoords);
+  printf("num_faces; %u\n", attributes.num_faces);
+  printf("num_face_num_verts; %u\n", attributes.num_face_num_verts);
+  for (size_t i = 0; attributes.num_vertices > i; i++) {
+    i % 5 ?: printf("\n");
+    printf("v %zu: %f\t", i, attributes.vertices[i]);
+  }
+  tinyobj_attrib_free(&attributes);
+  if (shapes) {
+    tinyobj_shapes_free(shapes, shapesCount);
+  }
+  if (materials) {
+    tinyobj_materials_free(materials, materialsCount);
+  }
+  return;
+}
 
 static bool setWindowHints() {
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -105,6 +183,7 @@ bool basic3d_meshes_transformation() {
   WGPUInstanceDescriptor descriptor = { .nextInChain = 0 };
   WGPUInstance instance = 0;
   GLFWwindow* window = 0;
+  modelLoad(RESOURCE_DIR "/meshes/pyramid.obj");
   if (!glfwInit()) {
     perror("Could not initialize GLFW!");
   }
