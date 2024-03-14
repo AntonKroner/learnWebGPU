@@ -1,4 +1,5 @@
 #include "../basic3d.h"
+#include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -15,28 +16,89 @@ static Vec3 points[] = {
   {+0.5, -0.5, -0.3},
   {+0.5, +0.5, -0.3},
   {-0.5, +0.5, -0.3},
-  {+0.0, +0.0, +0.5}
+  {-0.5, -0.5, -0.3},
+  {+0.5, -0.5, -0.3},
+  {+0.0, +0.0, +0.5},
+  {+0.5, -0.5, -0.3},
+  {+0.5, +0.5, -0.3},
+  {+0.0, +0.0, +0.5},
+  {+0.5, +0.5, -0.3},
+  {-0.5, +0.5, -0.3},
+  {+0.0, +0.0, +0.5},
+  {-0.5, +0.5, -0.3},
+  {-0.5, -0.5, -0.3},
+  {+0.0, +0.0, +0.5},
 };
 static Vec3 colors[] = {
   {1.0, 1.0, 1.0},
   {1.0, 1.0, 1.0},
   {1.0, 1.0, 1.0},
   {1.0, 1.0, 1.0},
-  {0.5, 0.5, 0.5},
+  {1.0, 1.0, 1.0},
+  {1.0, 1.0, 1.0},
+  {1.0, 1.0, 1.0},
+  {1.0, 1.0, 1.0},
+  {1.0, 1.0, 1.0},
+  {1.0, 1.0, 1.0},
+  {1.0, 1.0, 1.0},
+  {1.0, 1.0, 1.0},
+  {1.0, 1.0, 1.0},
+  {1.0, 1.0, 1.0},
+  {1.0, 1.0, 1.0},
+  {1.0, 1.0, 1.0},
+};
+static Vec3 normals[] = {
+  {   0.0,   -1.0,  0.0},
+  {   0.0,   -1.0,  0.0},
+  {   0.0,   -1.0,  0.0},
+  {   0.0,   -1.0,  0.0},
+  {   0.0, -0.848, 0.53},
+  {   0.0, -0.848, 0.53},
+  {   0.0, -0.848, 0.53},
+  { 0.848,    0.0, 0.53},
+  { 0.848,    0.0, 0.53},
+  { 0.848,    0.0, 0.53},
+  {   0.0,  0.848, 0.53},
+  {   0.0,  0.848, 0.53},
+  {   0.0,  0.848, 0.53},
+  {-0.848,    0.0, 0.53},
+  {-0.848,    0.0, 0.53},
+  {-0.848,    0.0, 0.53},
 };
 typedef struct {
     Vec3 position;
-    Vec3 normal;
+    // Vec3 normal;
     Vec3 color;
-} Vertices;
-
+} Vertex;
+static Vertex vertices[] = {
+  {{ -0.5, -0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
+  {{ +0.5, -0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
+  {{ +0.5, +0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
+  {{ -0.5, +0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
+  {{ -0.5, -0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
+  {{ +0.5, -0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
+  {{ +0.0, +0.0, +0.5 }, { 1.0, 1.0, 1.0 }},
+  {{ +0.5, -0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
+  {{ +0.5, +0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
+  {{ +0.0, +0.0, +0.5 }, { 1.0, 1.0, 1.0 }},
+  {{ +0.5, +0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
+  {{ -0.5, +0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
+  {{ +0.0, +0.0, +0.5 }, { 1.0, 1.0, 1.0 }},
+  {{ -0.5, +0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
+  {{ -0.5, -0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
+  {{ +0.0, +0.0, +0.5 }, { 1.0, 1.0, 1.0 }},
+};
 typedef struct {
-    Vertices* vertices;
+    Vertex* vertices;
     size_t vertexCount;
 } Model;
+// static Model model = {
+//   .vertices = vertices,
+//   .vertexCount = 16,
+// };
 
 static uint16_t indices[] = {
-  0, 1, 2, 0, 2, 3, 0, 1, 4, 1, 2, 4, 2, 3, 4, 3, 0, 4,
+  0, 1, 2, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
 };
 
 typedef struct {
@@ -68,14 +130,14 @@ static void loadFile(
   }
   *length = read_size;
 }
-static void modelLoad(char* const file, Model model[restrict static 1]) {
+static Model modelLoad(char* const file) {
   tinyobj_shape_t* shapes = 0;
   tinyobj_material_t* materials = 0;
   tinyobj_attrib_t attributes;
   size_t shapesCount;
   size_t materialsCount;
   tinyobj_attrib_init(&attributes);
-  int result = tinyobj_parse_obj(
+  const int success = tinyobj_parse_obj(
     &attributes,
     &shapes,
     &shapesCount,
@@ -84,8 +146,8 @@ static void modelLoad(char* const file, Model model[restrict static 1]) {
     file,
     loadFile,
     0,
-    TINYOBJ_FLAG_TRIANGULATE);
-  printf("result: %i\n", result);
+    0);
+  printf("success: %i\n", success);
   for (size_t i = 0; shapesCount > i; i++) {
     const tinyobj_shape_t shape = shapes[i];
     printf("shape %zu: {\n\tname: %s\n", i, shape.name);
@@ -97,18 +159,30 @@ static void modelLoad(char* const file, Model model[restrict static 1]) {
   printf("num_texcoords; %u\n", attributes.num_texcoords);
   printf("num_faces; %u\n", attributes.num_faces);
   printf("num_face_num_verts; %u\n", attributes.num_face_num_verts);
+  Model result = {
+    .vertexCount = attributes.num_vertices,
+    .vertices = calloc(attributes.num_vertices, sizeof(Vertex)),
+  };
   for (size_t i = 0; attributes.num_vertices > i; i++) {
     i % 5 ?: printf("\n");
     printf("v %zu: %f\t", i, attributes.vertices[i]);
+    result.vertices[i].color[0] = 1.0;
+    result.vertices[i].color[1] = 1.0;
+    result.vertices[i].color[2] = 1.0;
+    result.vertices[i].position[0] = attributes.vertices[i];
+    result.vertices[i].position[1] = attributes.vertices[i + 1];
+    result.vertices[i].position[2] = attributes.vertices[i + 2];
   }
+  printf("\n");
   tinyobj_attrib_free(&attributes);
   if (shapes) {
     tinyobj_shapes_free(shapes, shapesCount);
   }
+  printf("materials count: %zu\n", materialsCount);
   if (materials) {
     tinyobj_materials_free(materials, materialsCount);
   }
-  return;
+  return result;
 }
 
 static bool setWindowHints() {
@@ -119,18 +193,18 @@ static bool setWindowHints() {
 static void limitsSet(
   WGPURequiredLimits required[static 1],
   WGPUSupportedLimits supported) {
-  required->limits.maxVertexAttributes = 2;
+  required->limits.maxVertexAttributes = 3;
   required->limits.maxVertexBuffers = 2;
-  required->limits.maxBufferSize = 15 * 5 * sizeof(float);
-  required->limits.maxVertexBufferArrayStride = 5 * sizeof(float);
+  required->limits.maxBufferSize = 16 * sizeof(Vertex);
+  required->limits.maxVertexBufferArrayStride = sizeof(Vertex);
   required->limits.minStorageBufferOffsetAlignment =
     supported.limits.minStorageBufferOffsetAlignment;
   required->limits.minUniformBufferOffsetAlignment =
     supported.limits.minUniformBufferOffsetAlignment;
-  required->limits.maxInterStageShaderComponents = 5;
+  required->limits.maxInterStageShaderComponents = 6;
   required->limits.maxBindGroups = 1;
   required->limits.maxUniformBuffersPerShaderStage = 1;
-  required->limits.maxUniformBufferBindingSize = 16 * 4;
+  required->limits.maxUniformBufferBindingSize = 16 * 4 * sizeof(float);
   required->limits.maxTextureDimension1D = 480;
   required->limits.maxTextureDimension2D = 640;
   required->limits.maxTextureArrayLayers = 1;
@@ -183,7 +257,7 @@ bool basic3d_meshes_transformation() {
   WGPUInstanceDescriptor descriptor = { .nextInChain = 0 };
   WGPUInstance instance = 0;
   GLFWwindow* window = 0;
-  modelLoad(RESOURCE_DIR "/meshes/pyramid.obj");
+  const Model model = modelLoad(RESOURCE_DIR "/meshes/pyramid.obj");
   if (!glfwInit()) {
     perror("Could not initialize GLFW!");
   }
@@ -260,32 +334,20 @@ bool basic3d_meshes_transformation() {
       .entries = &binding,
     };
     WGPUBindGroup bindGroup = wgpuDeviceCreateBindGroup(device, &bindGroupDescriptor);
-    const size_t coordinatesLength = sizeof(points) / sizeof(typeof(*points));
-    WGPUBufferDescriptor coordinateBufferDescriptor = {
+    WGPUBufferDescriptor vertexBufferDescriptor = {
       .nextInChain = 0,
-      .label = "coordinateBuffer",
+      .label = "vertex buffer",
       .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex,
-      .size = coordinatesLength * sizeof(Point),
+      .size = model.vertexCount * sizeof(Vertex),
       .mappedAtCreation = false,
     };
-    WGPUBuffer coordinateBuffer =
-      wgpuDeviceCreateBuffer(device, &coordinateBufferDescriptor);
+    WGPUBuffer vertexBuffer = wgpuDeviceCreateBuffer(device, &vertexBufferDescriptor);
     wgpuQueueWriteBuffer(
       queue,
-      coordinateBuffer,
+      vertexBuffer,
       0,
-      points,
-      coordinateBufferDescriptor.size);
-    const size_t colorsLength = sizeof(colors) / sizeof(typeof(*colors));
-    WGPUBufferDescriptor colorBufferDescriptor = {
-      .nextInChain = 0,
-      .label = "colorsBuffer",
-      .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex,
-      .size = colorsLength * sizeof(Color),
-      .mappedAtCreation = false,
-    };
-    WGPUBuffer colorBuffer = wgpuDeviceCreateBuffer(device, &colorBufferDescriptor);
-    wgpuQueueWriteBuffer(queue, colorBuffer, 0, colors, colorBufferDescriptor.size);
+      model.vertices,
+      vertexBufferDescriptor.size);
     const size_t indexLength = sizeof(indices) / sizeof(typeof(*indices));
     WGPUBufferDescriptor indexBufferDescriptor = {
       .nextInChain = 0,
@@ -331,32 +393,27 @@ bool basic3d_meshes_transformation() {
       .targetCount = 1,
       .targets = &colorTarget,
     };
-    WGPUVertexAttribute coordinateAttribute = {
-      .shaderLocation = 0,
-      .format = WGPUVertexFormat_Float32x3,
-      .offset = 0,
-    };
-    WGPUVertexAttribute colorAttribute = {
-      .shaderLocation = 1,
-      .format = WGPUVertexFormat_Float32x3,
-      .offset = 0,
-    };
-    WGPUVertexBufferLayout bufferLayouts[2] = {
+    WGPUVertexAttribute vertexAttributes[] = {
       {
-       .attributeCount = 1,
-       .attributes = &coordinateAttribute,
-       .arrayStride = sizeof(Point),
-       .stepMode = WGPUVertexStepMode_Vertex,
+       // position
+        .shaderLocation = 0,
+       .format = WGPUVertexFormat_Float32x3,
+       .offset = 0,
        },
       {
-       .attributeCount = 1,
-       .attributes = &colorAttribute,
-       .arrayStride = sizeof(Color),
-       .stepMode = WGPUVertexStepMode_Vertex,
+       // color
+        .shaderLocation = 1,
+       .format = WGPUVertexFormat_Float32x3,
+       .offset = offsetof(Vertex, color),
        }
     };
-    const size_t bufferLayoutLength = 2;
 
+    WGPUVertexBufferLayout bufferLayout = {
+      .attributeCount = 2,
+      .attributes = vertexAttributes,
+      .arrayStride = sizeof(Vertex),
+      .stepMode = WGPUVertexStepMode_Vertex,
+    };
     WGPUDepthStencilState depthStencilState = depthStencilStateCreate();
     depthStencilState.depthCompare = WGPUCompareFunction_Less;
     depthStencilState.depthWriteEnabled = true;
@@ -391,8 +448,8 @@ bool basic3d_meshes_transformation() {
     WGPURenderPipelineDescriptor pipelineDesc = {
       .nextInChain = 0,
       .fragment = &fragmentState,
-      .vertex.bufferCount = bufferLayoutLength,
-      .vertex.buffers = bufferLayouts,
+      .vertex.bufferCount = 1,
+      .vertex.buffers = &bufferLayout,
       .vertex.module = shaderModule,
       .vertex.entryPoint = "vs_main",
       .vertex.constantCount = 0,
@@ -471,15 +528,9 @@ bool basic3d_meshes_transformation() {
       wgpuRenderPassEncoderSetVertexBuffer(
         renderPass,
         0,
-        coordinateBuffer,
+        vertexBuffer,
         0,
-        coordinatesLength * sizeof(Point));
-      wgpuRenderPassEncoderSetVertexBuffer(
-        renderPass,
-        1,
-        colorBuffer,
-        0,
-        colorsLength * sizeof(Color));
+        vertexBufferDescriptor.size);
       wgpuRenderPassEncoderSetIndexBuffer(
         renderPass,
         indexBuffer,
@@ -487,12 +538,14 @@ bool basic3d_meshes_transformation() {
         0,
         indexLength * sizeof(uint16_t));
       wgpuRenderPassEncoderSetBindGroup(renderPass, 0, bindGroup, 0, 0);
-      wgpuRenderPassEncoderDrawIndexed(renderPass, indexLength, 1, 0, 0, 0);
+      // wgpuRenderPassEncoderDrawIndexed(renderPass, indexLength, 1, 0, 0, 0);
+      wgpuRenderPassEncoderDraw(renderPass, model.vertexCount, 1, 0, 0);
+
       wgpuRenderPassEncoderEnd(renderPass);
       wgpuTextureViewRelease(nextTexture);
       WGPUCommandBufferDescriptor cmdBufferDescriptor = {
         .nextInChain = 0,
-        .label = "Command coordinateBuffer",
+        .label = "Command vertexBuffer",
       };
       WGPUCommandBuffer command = wgpuCommandEncoderFinish(encoder, &cmdBufferDescriptor);
       wgpuCommandEncoderRelease(encoder);
@@ -505,10 +558,8 @@ bool basic3d_meshes_transformation() {
     wgpuTextureDestroy(depthTexture);
     wgpuTextureRelease(depthTexture);
 
-    wgpuBufferDestroy(coordinateBuffer);
-    wgpuBufferRelease(coordinateBuffer);
-    wgpuBufferDestroy(colorBuffer);
-    wgpuBufferRelease(colorBuffer);
+    wgpuBufferDestroy(vertexBuffer);
+    wgpuBufferRelease(vertexBuffer);
     wgpuBufferDestroy(uniformBuffer);
     wgpuBufferRelease(uniformBuffer);
 
