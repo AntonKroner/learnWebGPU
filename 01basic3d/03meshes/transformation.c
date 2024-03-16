@@ -130,14 +130,15 @@ static void loadFile(
   }
   *length = read_size;
 }
-static Model modelLoad(char* const file) {
+static Model Model_load(char* const file) {
   tinyobj_shape_t* shapes = 0;
   tinyobj_material_t* materials = 0;
   tinyobj_attrib_t attributes;
   size_t shapesCount;
   size_t materialsCount;
   tinyobj_attrib_init(&attributes);
-  const int success = tinyobj_parse_obj(
+  Model result = { .vertexCount = 0, .vertices = 0 };
+  const int loaded = tinyobj_parse_obj(
     &attributes,
     &shapes,
     &shapesCount,
@@ -146,43 +147,35 @@ static Model modelLoad(char* const file) {
     file,
     loadFile,
     0,
-    0);
-  printf("success: %i\n", success);
-  for (size_t i = 0; shapesCount > i; i++) {
-    const tinyobj_shape_t shape = shapes[i];
-    printf("shape %zu: {\n\tname: %s\n", i, shape.name);
-    printf("\toffset: %u\n", shape.face_offset);
-    printf("\tlength: %u\n}\n", shape.length);
-  }
-  printf("num_vertices; %u\n", attributes.num_vertices);
-  printf("num_normals; %u\n", attributes.num_normals);
-  printf("num_texcoords; %u\n", attributes.num_texcoords);
-  printf("num_faces; %u\n", attributes.num_faces);
-  printf("num_face_num_verts; %u\n", attributes.num_face_num_verts);
-  Model result = {
-    .vertexCount = attributes.num_vertices,
-    .vertices = calloc(attributes.num_vertices, sizeof(Vertex)),
-  };
-  for (size_t i = 0; attributes.num_vertices > i; i++) {
-    i % 5 ?: printf("\n");
-    printf("v %zu: %f\t", i, attributes.vertices[i]);
-    result.vertices[i].color[0] = 1.0;
-    result.vertices[i].color[1] = 1.0;
-    result.vertices[i].color[2] = 1.0;
-    result.vertices[i].position[0] = attributes.vertices[i];
-    result.vertices[i].position[1] = attributes.vertices[i + 1];
-    result.vertices[i].position[2] = attributes.vertices[i + 2];
-  }
-  printf("\n");
-  tinyobj_attrib_free(&attributes);
-  if (shapes) {
-    tinyobj_shapes_free(shapes, shapesCount);
-  }
-  printf("materials count: %zu\n", materialsCount);
-  if (materials) {
-    tinyobj_materials_free(materials, materialsCount);
+    TINYOBJ_FLAG_TRIANGULATE);
+  if (loaded == TINYOBJ_SUCCESS) {
+    result.vertexCount = attributes.num_faces;
+    result.vertices = calloc(attributes.num_faces, sizeof(Vertex));
+    for (size_t i = 0; attributes.num_faces > i; i++) {
+      const tinyobj_vertex_index_t face = attributes.faces[i];
+      result.vertices[i].color[0] = 1.0;
+      result.vertices[i].color[1] = 1.0;
+      result.vertices[i].color[2] = 1.0;
+      result.vertices[i].position[0] = attributes.vertices[3 * face.v_idx];
+      result.vertices[i].position[1] = -1 * attributes.vertices[3 * face.v_idx + 2];
+      result.vertices[i].position[2] = attributes.vertices[3 * face.v_idx + 1];
+    }
+    tinyobj_attrib_free(&attributes);
+    if (shapes) {
+      tinyobj_shapes_free(shapes, shapesCount);
+    }
+    if (materials) {
+      printf("materials count: %zu\n", materialsCount);
+      tinyobj_materials_free(materials, materialsCount);
+    }
   }
   return result;
+}
+void Model_destroy(Model* model) {
+  if (model->vertices) {
+    free(model->vertices);
+  }
+  model->vertexCount = 0;
 }
 
 static bool setWindowHints() {
@@ -257,7 +250,7 @@ bool basic3d_meshes_transformation() {
   WGPUInstanceDescriptor descriptor = { .nextInChain = 0 };
   WGPUInstance instance = 0;
   GLFWwindow* window = 0;
-  const Model model = modelLoad(RESOURCE_DIR "/meshes/pyramid.obj");
+  const Model model = Model_load(RESOURCE_DIR "/meshes/mammoth.obj");
   if (!glfwInit()) {
     perror("Could not initialize GLFW!");
   }
@@ -554,6 +547,7 @@ bool basic3d_meshes_transformation() {
       wgpuSwapChainPresent(swapChain);
       wgpuDeviceTick(device);
     }
+    Model_destroy(&model);
     wgpuTextureViewRelease(depthTextureView);
     wgpuTextureDestroy(depthTexture);
     wgpuTextureRelease(depthTexture);

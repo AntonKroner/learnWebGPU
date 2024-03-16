@@ -32,6 +32,7 @@
 		"multisample",
 		"multisampled",
 		"Renderable",
+		"TINYOBJ",
 		"Uncaptured",
 		"wgpu",
 		"WGSL",
