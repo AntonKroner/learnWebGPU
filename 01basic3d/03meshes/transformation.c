@@ -11,101 +11,21 @@
 #include "../../adapter.h"
 #include "../../device.h"
 typedef float Vec3[3];
-static Vec3 points[] = {
-  {-0.5, -0.5, -0.3},
-  {+0.5, -0.5, -0.3},
-  {+0.5, +0.5, -0.3},
-  {-0.5, +0.5, -0.3},
-  {-0.5, -0.5, -0.3},
-  {+0.5, -0.5, -0.3},
-  {+0.0, +0.0, +0.5},
-  {+0.5, -0.5, -0.3},
-  {+0.5, +0.5, -0.3},
-  {+0.0, +0.0, +0.5},
-  {+0.5, +0.5, -0.3},
-  {-0.5, +0.5, -0.3},
-  {+0.0, +0.0, +0.5},
-  {-0.5, +0.5, -0.3},
-  {-0.5, -0.5, -0.3},
-  {+0.0, +0.0, +0.5},
-};
-static Vec3 colors[] = {
-  {1.0, 1.0, 1.0},
-  {1.0, 1.0, 1.0},
-  {1.0, 1.0, 1.0},
-  {1.0, 1.0, 1.0},
-  {1.0, 1.0, 1.0},
-  {1.0, 1.0, 1.0},
-  {1.0, 1.0, 1.0},
-  {1.0, 1.0, 1.0},
-  {1.0, 1.0, 1.0},
-  {1.0, 1.0, 1.0},
-  {1.0, 1.0, 1.0},
-  {1.0, 1.0, 1.0},
-  {1.0, 1.0, 1.0},
-  {1.0, 1.0, 1.0},
-  {1.0, 1.0, 1.0},
-  {1.0, 1.0, 1.0},
-};
-static Vec3 normals[] = {
-  {   0.0,   -1.0,  0.0},
-  {   0.0,   -1.0,  0.0},
-  {   0.0,   -1.0,  0.0},
-  {   0.0,   -1.0,  0.0},
-  {   0.0, -0.848, 0.53},
-  {   0.0, -0.848, 0.53},
-  {   0.0, -0.848, 0.53},
-  { 0.848,    0.0, 0.53},
-  { 0.848,    0.0, 0.53},
-  { 0.848,    0.0, 0.53},
-  {   0.0,  0.848, 0.53},
-  {   0.0,  0.848, 0.53},
-  {   0.0,  0.848, 0.53},
-  {-0.848,    0.0, 0.53},
-  {-0.848,    0.0, 0.53},
-  {-0.848,    0.0, 0.53},
-};
 typedef struct {
     Vec3 position;
-    // Vec3 normal;
+    Vec3 normal;
     Vec3 color;
 } Vertex;
-static Vertex vertices[] = {
-  {{ -0.5, -0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
-  {{ +0.5, -0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
-  {{ +0.5, +0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
-  {{ -0.5, +0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
-  {{ -0.5, -0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
-  {{ +0.5, -0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
-  {{ +0.0, +0.0, +0.5 }, { 1.0, 1.0, 1.0 }},
-  {{ +0.5, -0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
-  {{ +0.5, +0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
-  {{ +0.0, +0.0, +0.5 }, { 1.0, 1.0, 1.0 }},
-  {{ +0.5, +0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
-  {{ -0.5, +0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
-  {{ +0.0, +0.0, +0.5 }, { 1.0, 1.0, 1.0 }},
-  {{ -0.5, +0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
-  {{ -0.5, -0.5, -0.3 }, { 1.0, 1.0, 1.0 }},
-  {{ +0.0, +0.0, +0.5 }, { 1.0, 1.0, 1.0 }},
-};
 typedef struct {
     Vertex* vertices;
     size_t vertexCount;
 } Model;
-// static Model model = {
-//   .vertices = vertices,
-//   .vertexCount = 16,
-// };
-
-static uint16_t indices[] = {
-  0, 1, 2, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-};
-
 typedef struct {
     float color[4];
     float time;
     float _pad[3];
 } Uniforms;
+
 static void loadFile(
   void* /* ctx */,
   const char* filename,
@@ -159,6 +79,9 @@ static Model Model_load(char* const file) {
       result.vertices[i].position[0] = attributes.vertices[3 * face.v_idx];
       result.vertices[i].position[1] = -1 * attributes.vertices[3 * face.v_idx + 2];
       result.vertices[i].position[2] = attributes.vertices[3 * face.v_idx + 1];
+      result.vertices[i].normal[0] = attributes.normals[3 * face.vn_idx];
+      result.vertices[i].normal[1] = -1 * attributes.normals[3 * face.vn_idx + 2];
+      result.vertices[i].normal[2] = attributes.normals[3 * face.vn_idx + 1];
     }
     tinyobj_attrib_free(&attributes);
     if (shapes) {
@@ -177,7 +100,6 @@ void Model_destroy(Model* model) {
   }
   model->vertexCount = 0;
 }
-
 static bool setWindowHints() {
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
@@ -341,16 +263,6 @@ bool basic3d_meshes_transformation() {
       0,
       model.vertices,
       vertexBufferDescriptor.size);
-    const size_t indexLength = sizeof(indices) / sizeof(typeof(*indices));
-    WGPUBufferDescriptor indexBufferDescriptor = {
-      .nextInChain = 0,
-      .label = "indexBuffer",
-      .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Index,
-      .size = (indexLength * sizeof(uint16_t) + 3) & ~3,
-      .mappedAtCreation = false,
-    };
-    WGPUBuffer indexBuffer = wgpuDeviceCreateBuffer(device, &indexBufferDescriptor);
-    wgpuQueueWriteBuffer(queue, indexBuffer, 0, indices, indexBufferDescriptor.size);
     WGPUSwapChainDescriptor swapChainDescriptor = {
       .nextInChain = 0,
       .width = 640,
@@ -394,15 +306,21 @@ bool basic3d_meshes_transformation() {
        .offset = 0,
        },
       {
-       // color
+       // normal
         .shaderLocation = 1,
+       .format = WGPUVertexFormat_Float32x3,
+       .offset = offsetof(Vertex, normal),
+       },
+      {
+       // color
+        .shaderLocation = 2,
        .format = WGPUVertexFormat_Float32x3,
        .offset = offsetof(Vertex, color),
        }
     };
 
     WGPUVertexBufferLayout bufferLayout = {
-      .attributeCount = 2,
+      .attributeCount = 3,
       .attributes = vertexAttributes,
       .arrayStride = sizeof(Vertex),
       .stepMode = WGPUVertexStepMode_Vertex,
@@ -524,21 +442,13 @@ bool basic3d_meshes_transformation() {
         vertexBuffer,
         0,
         vertexBufferDescriptor.size);
-      wgpuRenderPassEncoderSetIndexBuffer(
-        renderPass,
-        indexBuffer,
-        WGPUIndexFormat_Uint16,
-        0,
-        indexLength * sizeof(uint16_t));
       wgpuRenderPassEncoderSetBindGroup(renderPass, 0, bindGroup, 0, 0);
-      // wgpuRenderPassEncoderDrawIndexed(renderPass, indexLength, 1, 0, 0, 0);
       wgpuRenderPassEncoderDraw(renderPass, model.vertexCount, 1, 0, 0);
-
       wgpuRenderPassEncoderEnd(renderPass);
       wgpuTextureViewRelease(nextTexture);
       WGPUCommandBufferDescriptor cmdBufferDescriptor = {
         .nextInChain = 0,
-        .label = "Command vertexBuffer",
+        .label = "command buffer",
       };
       WGPUCommandBuffer command = wgpuCommandEncoderFinish(encoder, &cmdBufferDescriptor);
       wgpuCommandEncoderRelease(encoder);
