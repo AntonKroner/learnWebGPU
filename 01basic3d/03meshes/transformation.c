@@ -10,6 +10,8 @@
 #include "../../library/tinyobj_loader_c.h"
 #include "../../adapter.h"
 #include "../../device.h"
+#include "../../linearAlgebra.h"
+
 typedef float Vec3[3];
 typedef struct {
     Vec3 position;
@@ -21,6 +23,9 @@ typedef struct {
     size_t vertexCount;
 } Model;
 typedef struct {
+    Matrix4 projection;
+    Matrix4 view;
+    Matrix4 model;
     float color[4];
     float time;
     float _pad[3];
@@ -216,11 +221,6 @@ bool basic3d_meshes_transformation() {
       .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform,
       .mappedAtCreation = false
     };
-    WGPUBuffer uniformBuffer = wgpuDeviceCreateBuffer(device, &uniformBufferDescriptor);
-    Uniforms uniforms = {
-      .time = 0.0f,
-      .color = {0.0f, 1.0f, 0.4f, 1.0f},
-    };
     WGPUBindGroupLayoutEntry bindingLayout = bindingLayoutCreate(sizeof(Uniforms));
     WGPUBindGroupLayoutDescriptor bindGroupLayoutDescriptor = {
       .nextInChain = 0,
@@ -235,6 +235,7 @@ bool basic3d_meshes_transformation() {
       .bindGroupLayouts = &bindGroupLayout,
     };
     WGPUPipelineLayout layout = wgpuDeviceCreatePipelineLayout(device, &layoutDescriptor);
+    WGPUBuffer uniformBuffer = wgpuDeviceCreateBuffer(device, &uniformBufferDescriptor);
     WGPUBindGroupEntry binding = {
       .nextInChain = 0,
       .binding = 0,
@@ -376,7 +377,10 @@ bool basic3d_meshes_transformation() {
       .layout = layout,
     };
     WGPURenderPipeline pipeline = wgpuDeviceCreateRenderPipeline(device, &pipelineDesc);
-
+    Uniforms uniforms = {
+      .time = 0.0f,
+      .color = {0.0f, 1.0f, 0.4f, 1.0f},
+    };
     while (!glfwWindowShouldClose(window)) {
       glfwPollEvents();
       WGPUTextureView nextTexture = wgpuSwapChainGetCurrentTextureView(swapChain);

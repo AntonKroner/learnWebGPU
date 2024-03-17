@@ -11,6 +11,7 @@ typedef struct {
 
 Matrix4 Matrix4_fill(float value);
 Matrix4 Matrix4_diagonal(float value);
+Matrix4 Matrix4_transpose(Matrix4 matrix);
 Matrix4 Matrix4_add(Matrix4 a, Matrix4 b);
 Matrix4 Matrix4_multiply(Matrix4 a, Matrix4 b);
 void Matrix4_print(Matrix4 matrix);
@@ -32,6 +33,26 @@ Matrix4 Matrix4_diagonal(float value) {
   for (size_t n = 0; 4 > n; n++) {
     result.elements[4 * n + n] = value;
   }
+  return result;
+}
+Matrix4 Matrix4_transpose(Matrix4 matrix) {
+  Matrix4 result = {};
+  result.elements[0] = matrix.elements[0];
+  result.elements[1] = matrix.elements[4];
+  result.elements[2] = matrix.elements[0];
+  result.elements[3] = matrix.elements[0];
+  result.elements[4] = matrix.elements[1];
+  result.elements[5] = matrix.elements[5];
+  result.elements[6] = matrix.elements[0];
+  result.elements[7] = matrix.elements[0];
+  result.elements[8] = matrix.elements[2];
+  result.elements[9] = matrix.elements[0];
+  result.elements[10] = matrix.elements[10];
+  result.elements[11] = matrix.elements[0];
+  result.elements[12] = matrix.elements[3];
+  result.elements[13] = matrix.elements[0];
+  result.elements[14] = matrix.elements[0];
+  result.elements[15] = matrix.elements[15];
   return result;
 }
 Matrix4 Matrix4_add(Matrix4 a, Matrix4 b) {
