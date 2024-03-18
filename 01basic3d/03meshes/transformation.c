@@ -390,7 +390,7 @@ bool basic3d_meshes_transformation() {
     rotation.elements[6] = s2;
     rotation.elements[9] = -s2;
     rotation.elements[10] = c2;
-    Matrix4 view = Matrix4_multiply(rotation, translation);
+    Matrix4 view = Matrix4_multiply(translation, rotation);
     float ratio = 640.0f / 480.0f;
     float focalLength = 2.0;
     float near = 0.01f;
@@ -400,17 +400,18 @@ bool basic3d_meshes_transformation() {
     projection.elements[5] = ratio;
     projection.elements[10] = far * divider;
     projection.elements[11] = -far * near * divider;
-    projection.elements[14] = 1 / focalLength;
-    Matrix4 scaling = Matrix4_diagonal(0.3);
-    scaling.elements[15] = 1.0;
-    translation = Matrix4_diagonal(1.0);
-    translation.elements[3] = 0.5;
+    projection.elements[14] = 1.0 / focalLength;
+    projection.elements[15] = 0;
     Uniforms uniforms = {
       .matrices.view = Matrix4_transpose(view),
       .matrices.projection = Matrix4_transpose(projection),
       .time = 0.0f,
       .color = {0.0f, 1.0f, 0.4f, 1.0f},
     };
+    Matrix4 scaling = Matrix4_diagonal(0.3);
+    scaling.elements[15] = 1.0;
+    translation = Matrix4_diagonal(1.0);
+    translation.elements[3] = 0.5;
     while (!glfwWindowShouldClose(window)) {
       glfwPollEvents();
       WGPUTextureView nextTexture = wgpuSwapChainGetCurrentTextureView(swapChain);
@@ -428,7 +429,6 @@ bool basic3d_meshes_transformation() {
       rotation.elements[5] = c1;
       uniforms.matrices.model = Matrix4_transpose(
         Matrix4_multiply(rotation, Matrix4_multiply(translation, scaling)));
-      Matrix4_print(uniforms.matrices.model);
       wgpuQueueWriteBuffer(queue, uniformBuffer, 0, &uniforms, sizeof(Uniforms));
       WGPUCommandEncoderDescriptor commandEncoderDesc = {
         .nextInChain = 0,
