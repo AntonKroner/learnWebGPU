@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <tgmath.h>
 #include "../../library/glfw/include/GLFW/glfw3.h"
 #include "../../library/webgpu.h"
 #include "../../library/glfw3webgpu/glfw3webgpu.h"
@@ -23,9 +24,11 @@ typedef struct {
     size_t vertexCount;
 } Model;
 typedef struct {
-    Matrix4 projection;
-    Matrix4 view;
-    Matrix4 model;
+    struct {
+        Matrix4 projection;
+        Matrix4 view;
+        Matrix4 model;
+    } matrices;
     float color[4];
     float time;
     float _pad[3];
@@ -377,7 +380,34 @@ bool basic3d_meshes_transformation() {
       .layout = layout,
     };
     WGPURenderPipeline pipeline = wgpuDeviceCreateRenderPipeline(device, &pipelineDesc);
+    Matrix4 translation = Matrix4_diagonal(1.0);
+    translation.elements[11] = -2.0;
+    float angle = 3.0 * M_PI / 4.0;
+    const float c2 = cos(angle);
+    const float s2 = sin(angle);
+    Matrix4 rotation = Matrix4_diagonal(1.0);
+    rotation.elements[5] = c2;
+    rotation.elements[6] = s2;
+    rotation.elements[9] = -s2;
+    rotation.elements[10] = c2;
+    Matrix4 view = Matrix4_multiply(rotation, translation);
+    float ratio = 640.0f / 480.0f;
+    float focalLength = 2.0;
+    float near = 0.01f;
+    float far = 100.0f;
+    float divider = 1 / (focalLength * (far - near));
+    Matrix4 projection = Matrix4_diagonal(1.0);
+    projection.elements[5] = ratio;
+    projection.elements[10] = far * divider;
+    projection.elements[11] = -far * near * divider;
+    projection.elements[14] = 1 / focalLength;
+    Matrix4 scaling = Matrix4_diagonal(0.3);
+    scaling.elements[15] = 1.0;
+    translation = Matrix4_diagonal(1.0);
+    translation.elements[3] = 0.5;
     Uniforms uniforms = {
+      .matrices.view = Matrix4_transpose(view),
+      .matrices.projection = Matrix4_transpose(projection),
       .time = 0.0f,
       .color = {0.0f, 1.0f, 0.4f, 1.0f},
     };
@@ -388,21 +418,18 @@ bool basic3d_meshes_transformation() {
         perror("Cannot acquire next swap chain texture\n");
         break;
       }
-
       uniforms.time = (float)glfwGetTime();
-      wgpuQueueWriteBuffer(
-        queue,
-        uniformBuffer,
-        sizeof(uniforms.color),
-        &uniforms.time,
-        sizeof(float));
-      wgpuQueueWriteBuffer(
-        queue,
-        uniformBuffer,
-        0,
-        &uniforms.color,
-        sizeof(uniforms.color));
-
+      rotation = Matrix4_diagonal(1.0);
+      float c1 = cos(uniforms.time);
+      float s1 = sin(uniforms.time);
+      rotation.elements[0] = c1;
+      rotation.elements[1] = s1;
+      rotation.elements[4] = -s1;
+      rotation.elements[5] = c1;
+      uniforms.matrices.model = Matrix4_transpose(
+        Matrix4_multiply(rotation, Matrix4_multiply(translation, scaling)));
+      Matrix4_print(uniforms.matrices.model);
+      wgpuQueueWriteBuffer(queue, uniformBuffer, 0, &uniforms, sizeof(Uniforms));
       WGPUCommandEncoderDescriptor commandEncoderDesc = {
         .nextInChain = 0,
         .label = "Command Encoder",
