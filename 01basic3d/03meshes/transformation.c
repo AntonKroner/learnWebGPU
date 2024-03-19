@@ -381,8 +381,8 @@ bool basic3d_meshes_transformation() {
     };
     WGPURenderPipeline pipeline = wgpuDeviceCreateRenderPipeline(device, &pipelineDesc);
     Matrix4 translation = Matrix4_diagonal(1.0);
-    translation.elements[11] = -2.0;
-    float angle = 3.0 * M_PI / 4.0;
+    translation.elements[11] = 2.0f;
+    float angle = 3.0f * M_PI / 4.0f;
     const float c2 = cos(angle);
     const float s2 = sin(angle);
     Matrix4 rotation = Matrix4_diagonal(1.0);
@@ -395,13 +395,13 @@ bool basic3d_meshes_transformation() {
     float focalLength = 2.0;
     float near = 0.01f;
     float far = 100.0f;
-    float divider = 1 / (focalLength * (far - near));
+    float divider = 1.0f / (focalLength * (far - near));
     Matrix4 projection = Matrix4_diagonal(1.0);
     projection.elements[5] = ratio;
     projection.elements[10] = far * divider;
     projection.elements[11] = -far * near * divider;
-    projection.elements[14] = 1.0 / focalLength;
-    projection.elements[15] = 0;
+    projection.elements[14] = 1.0f / focalLength;
+    projection.elements[15] = 1.0;
     Uniforms uniforms = {
       .matrices.view = Matrix4_transpose(view),
       .matrices.projection = Matrix4_transpose(projection),
@@ -411,7 +411,7 @@ bool basic3d_meshes_transformation() {
     Matrix4 scaling = Matrix4_diagonal(0.3);
     scaling.elements[15] = 1.0;
     translation = Matrix4_diagonal(1.0);
-    translation.elements[3] = 0.5;
+    translation.elements[3] = 0.5f;
     while (!glfwWindowShouldClose(window)) {
       glfwPollEvents();
       WGPUTextureView nextTexture = wgpuSwapChainGetCurrentTextureView(swapChain);
