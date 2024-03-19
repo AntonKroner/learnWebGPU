@@ -16,4 +16,6 @@ bool basic3d_meshes_simple();
 bool basic3d_meshes_depth();
 bool basic3d_meshes_transformation();
 
+bool basic3d_texturing_first();
+
 #endif // basic3d_H_
