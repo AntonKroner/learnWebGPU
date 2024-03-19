@@ -7,7 +7,6 @@
 #include "../../library/glfw/include/GLFW/glfw3.h"
 #include "../../library/webgpu.h"
 #include "../../library/glfw3webgpu/glfw3webgpu.h"
-#define TINYOBJ_LOADER_C_IMPLEMENTATION
 #include "../../library/tinyobj_loader_c.h"
 #include "../../adapter.h"
 #include "../../device.h"
@@ -102,7 +101,7 @@ static Model Model_load(char* const file) {
   }
   return result;
 }
-void Model_destroy(Model* model) {
+static void Model_destroy(Model* model) {
   if (model->vertices) {
     free(model->vertices);
   }
@@ -131,12 +130,13 @@ static void limitsSet(
   required->limits.maxTextureDimension1D = 480;
   required->limits.maxTextureDimension2D = 640;
   required->limits.maxTextureArrayLayers = 1;
+  required->limits.maxSampledTexturesPerShaderStage = 1;
 }
-static WGPUBindGroupLayoutEntry bindingLayoutCreate(size_t size) {
+static WGPUBindGroupLayoutEntry bindingLayoutCreate() {
   WGPUBindGroupLayoutEntry result = {
     .buffer.nextInChain = 0,
-    .buffer.type = WGPUBufferBindingType_Uniform,
-    .buffer.minBindingSize = size,
+    .buffer.type = WGPUBufferBindingType_Undefined,
+    .buffer.minBindingSize = 0,
     .buffer.hasDynamicOffset = false,
     .sampler.nextInChain = 0,
     .sampler.type = WGPUSamplerBindingType_Undefined,
@@ -180,7 +180,7 @@ bool basic3d_texturing_first() {
   WGPUInstanceDescriptor descriptor = { .nextInChain = 0 };
   WGPUInstance instance = 0;
   GLFWwindow* window = 0;
-  const Model model = Model_load(RESOURCE_DIR "/meshes/mammoth.obj");
+  const Model model = Model_load(RESOURCE_DIR "/texturing/plane.obj");
   if (!glfwInit()) {
     perror("Could not initialize GLFW!");
   }
@@ -217,6 +217,59 @@ bool basic3d_texturing_first() {
     };
     WGPUDevice device = device_request(adapter, &deviceDescriptor);
     WGPUQueue queue = wgpuDeviceGetQueue(device);
+    WGPUTextureDescriptor textureDescriptor = {
+      .nextInChain = 0,
+      .dimension = WGPUTextureDimension_2D,
+      .format = WGPUTextureFormat_RGBA8Unorm,
+      .mipLevelCount = 1,
+      .sampleCount = 1,
+      .size = {256, 256, 1},
+      .usage = WGPUTextureUsage_TextureBinding | WGPUTextureUsage_CopyDst,
+      .viewFormatCount = 0,
+      .viewFormats = 0,
+    };
+    WGPUTexture texture = wgpuDeviceCreateTexture(device, &textureDescriptor);
+    const size_t pixelCount =
+      4 * textureDescriptor.size.width * textureDescriptor.size.height;
+    uint8_t pixels[pixelCount];
+    for (uint32_t i = 0; i < textureDescriptor.size.width; ++i) {
+      for (uint32_t j = 0; j < textureDescriptor.size.height; ++j) {
+        uint8_t* p = &pixels[4 * (j * textureDescriptor.size.width + i)];
+        p[0] = (uint8_t)i; // r
+        p[1] = (uint8_t)j; // g
+        p[2] = 128; // b
+        p[3] = 255; // a
+      }
+    }
+    WGPUTextureViewDescriptor textureViewDescriptor = {
+      .aspect = WGPUTextureAspect_All,
+      .baseArrayLayer = 0,
+      .arrayLayerCount = 1,
+      .baseMipLevel = 0,
+      .mipLevelCount = 1,
+      .dimension = WGPUTextureViewDimension_2D,
+      .format = textureDescriptor.format,
+    };
+
+    WGPUTextureView textureView = wgpuTextureCreateView(texture, &textureViewDescriptor);
+    WGPUImageCopyTexture destination = {
+      .texture = texture,
+      .mipLevel = 0,
+      .origin = {0, 0, 0},
+      .aspect = WGPUTextureAspect_All,
+    };
+    WGPUTextureDataLayout source = {
+      .offset = 0,
+      .bytesPerRow = 4 * textureDescriptor.size.width,
+      .rowsPerImage = textureDescriptor.size.width,
+    };
+    wgpuQueueWriteTexture(
+      queue,
+      &destination,
+      pixels,
+      pixelCount,
+      &source,
+      &textureDescriptor.size);
     WGPUBufferDescriptor uniformBufferDescriptor = {
       .nextInChain = 0,
       .label = "uniformBuffer",
@@ -224,11 +277,21 @@ bool basic3d_texturing_first() {
       .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform,
       .mappedAtCreation = false
     };
-    WGPUBindGroupLayoutEntry bindingLayout = bindingLayoutCreate(sizeof(Uniforms));
+    WGPUBindGroupLayoutEntry bindingLayouts[] = {
+      bindingLayoutCreate(),
+      bindingLayoutCreate(),
+    };
+    bindingLayouts[0].buffer.type = WGPUBufferBindingType_Uniform;
+    bindingLayouts[0].buffer.minBindingSize = sizeof(Uniforms);
+    bindingLayouts[1].binding = 1;
+    bindingLayouts[1].visibility = WGPUShaderStage_Fragment;
+    bindingLayouts[1].texture.sampleType = WGPUTextureSampleType_Float;
+    bindingLayouts[1].texture.viewDimension = WGPUTextureViewDimension_2D;
+
     WGPUBindGroupLayoutDescriptor bindGroupLayoutDescriptor = {
       .nextInChain = 0,
-      .entryCount = 1,
-      .entries = &bindingLayout,
+      .entryCount = 2,
+      .entries = bindingLayouts,
     };
     WGPUBindGroupLayout bindGroupLayout =
       wgpuDeviceCreateBindGroupLayout(device, &bindGroupLayoutDescriptor);
@@ -239,18 +302,25 @@ bool basic3d_texturing_first() {
     };
     WGPUPipelineLayout layout = wgpuDeviceCreatePipelineLayout(device, &layoutDescriptor);
     WGPUBuffer uniformBuffer = wgpuDeviceCreateBuffer(device, &uniformBufferDescriptor);
-    WGPUBindGroupEntry binding = {
-      .nextInChain = 0,
-      .binding = 0,
-      .buffer = uniformBuffer,
-      .offset = 0,
-      .size = sizeof(Uniforms),
+    WGPUBindGroupEntry bindings[] = {
+      {
+       .nextInChain = 0,
+       .binding = 0,
+       .buffer = uniformBuffer,
+       .offset = 0,
+       .size = sizeof(Uniforms),
+       },
+      {
+       .nextInChain = 0,
+       .binding = 1,
+       .textureView = textureView,
+       },
     };
     WGPUBindGroupDescriptor bindGroupDescriptor = {
       .nextInChain = 0,
       .layout = bindGroupLayout,
       .entryCount = bindGroupLayoutDescriptor.entryCount,
-      .entries = &binding,
+      .entries = bindings,
     };
     WGPUBindGroup bindGroup = wgpuDeviceCreateBindGroup(device, &bindGroupDescriptor);
     WGPUBufferDescriptor vertexBufferDescriptor = {
@@ -278,7 +348,7 @@ bool basic3d_texturing_first() {
     WGPUSwapChain swapChain =
       wgpuDeviceCreateSwapChain(device, surface, &swapChainDescriptor);
     WGPUShaderModule shaderModule =
-      device_ShaderModule(device, RESOURCE_DIR "/meshes/transformation.wgsl");
+      device_ShaderModule(device, RESOURCE_DIR "/texturing/first.wgsl");
     WGPUBlendState blendState = {
       .color.srcFactor = WGPUBlendFactor_SrcAlpha,
       .color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha,
@@ -322,7 +392,6 @@ bool basic3d_texturing_first() {
        .offset = offsetof(Vertex, color),
        }
     };
-
     WGPUVertexBufferLayout bufferLayout = {
       .attributeCount = 3,
       .attributes = vertexAttributes,
@@ -358,50 +427,6 @@ bool basic3d_texturing_first() {
     };
     WGPUTextureView depthTextureView =
       wgpuTextureCreateView(depthTexture, &depthTextureViewDesc);
-
-    WGPUTextureDescriptor textureDescriptor = {
-      .nextInChain = 0,
-      .dimension = WGPUTextureDimension_2D,
-      .format = WGPUTextureFormat_RGBA8Unorm,
-      .mipLevelCount = 1,
-      .sampleCount = 1,
-      .size = {256, 256, 1},
-      .usage = WGPUTextureUsage_TextureBinding | WGPUTextureUsage_CopyDst,
-      .viewFormatCount = 0,
-      .viewFormats = 0,
-    };
-    WGPUTexture texture = wgpuDeviceCreateTexture(device, &textureDescriptor);
-    const size_t pixelCount =
-      4 * textureDescriptor.size.width * textureDescriptor.size.height;
-    uint8_t pixels[pixelCount];
-    for (uint32_t i = 0; i < textureDescriptor.size.width; ++i) {
-      for (uint32_t j = 0; j < textureDescriptor.size.height; ++j) {
-        uint8_t* p = &pixels[4 * (j * textureDescriptor.size.width + i)];
-        p[0] = (uint8_t)i; // r
-        p[1] = (uint8_t)j; // g
-        p[2] = 128; // b
-        p[3] = 255; // a
-      }
-    }
-    WGPUImageCopyTexture destination = {
-      .texture = texture,
-      .mipLevel = 0,
-      .origin = {0, 0, 0},
-      .aspect = WGPUTextureAspect_All,
-    };
-    WGPUTextureDataLayout source = {
-      .offset = 0,
-      .bytesPerRow = 4 * textureDescriptor.size.width,
-      .rowsPerImage = textureDescriptor.size.width,
-    };
-    wgpuQueueWriteTexture(
-      queue,
-      &destination,
-      pixels,
-      pixelCount,
-      &source,
-      &textureDescriptor.size);
-
     WGPURenderPipelineDescriptor pipelineDesc = {
       .nextInChain = 0,
       .fragment = &fragmentState,

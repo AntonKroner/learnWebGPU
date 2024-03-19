@@ -27,6 +27,6 @@ int main(int argc, char* argv[static argc + 1]) {
         printf("input: %s\n", optarg);
     }
   }
-  bool basic3d_texturing_first();
+  basic3d_texturing_first();
   return result;
 }

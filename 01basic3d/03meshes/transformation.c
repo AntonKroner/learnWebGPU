@@ -102,7 +102,7 @@ static Model Model_load(char* const file) {
   }
   return result;
 }
-void Model_destroy(Model* model) {
+static void Model_destroy(Model* model) {
   if (model->vertices) {
     free(model->vertices);
   }

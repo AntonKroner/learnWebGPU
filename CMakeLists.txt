@@ -10,6 +10,7 @@ add_executable(webgpu.exe
 	main.c
 	adapter.c
 	device.c
+	linearAlgebra.c
 	01basic3d/01geometry/triangle.c
 	01basic3d/01geometry/buffers.c
 	01basic3d/01geometry/vertex.c
