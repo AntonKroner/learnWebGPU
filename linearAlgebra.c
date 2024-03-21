@@ -61,6 +61,23 @@ void Matrix4_print(Matrix4 matrix) {
     printf("\n");
   }
 }
+Matrix4 Matrix4_orthographic(
+  int left,
+  int right,
+  int bottom,
+  int top,
+  float near,
+  float far) {
+  Matrix4 result = { 0 };
+  result.elements[0] = 2.0 / (right - left);
+  result.elements[3] = -1.0 * (right + left) / (right - left);
+  result.elements[5] = 2.0 / (top - bottom);
+  result.elements[7] = -1.0 * (top + bottom) / (top - bottom);
+  result.elements[10] = -2.0 / (far - near);
+  result.elements[11] = -1.0 * (far + near) / (far - near);
+  result.elements[15] = 1.0;
+  return result;
+}
 Vector4 Vector4_from(float values[static 4]) {
   Vector4 result = {
     .components = {values[0], values[1], values[2], values[3]}

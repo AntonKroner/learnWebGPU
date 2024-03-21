@@ -235,9 +235,9 @@ bool basic3d_texturing_first() {
     for (uint32_t i = 0; i < textureDescriptor.size.width; ++i) {
       for (uint32_t j = 0; j < textureDescriptor.size.height; ++j) {
         uint8_t* p = &pixels[4 * (j * textureDescriptor.size.width + i)];
-        p[0] = (uint8_t)i; // r
-        p[1] = (uint8_t)j; // g
-        p[2] = 128; // b
+        p[0] = (i / 16) % 2 == (j / 16) % 2 ? 255 : 0; // r
+        p[1] = ((i - j) / 16) % 2 == 0 ? 255 : 0; // g
+        p[2] = ((i + j) / 16) % 2 == 0 ? 255 : 0; // b
         p[3] = 255; // a
       }
     }
@@ -447,38 +447,14 @@ bool basic3d_texturing_first() {
       .layout = layout,
     };
     WGPURenderPipeline pipeline = wgpuDeviceCreateRenderPipeline(device, &pipelineDesc);
-    Matrix4 translation = Matrix4_diagonal(1.0);
-    translation.elements[11] = 2.0f;
-    float angle = 3.0f * M_PI / 4.0f;
-    const float c2 = cos(angle);
-    const float s2 = sin(angle);
-    Matrix4 rotation = Matrix4_diagonal(1.0);
-    rotation.elements[5] = c2;
-    rotation.elements[6] = s2;
-    rotation.elements[9] = -s2;
-    rotation.elements[10] = c2;
-    Matrix4 view = Matrix4_multiply(translation, rotation);
-    float ratio = 640.0f / 480.0f;
-    float focalLength = 2.0;
-    float near = 0.01f;
-    float far = 100.0f;
-    float divider = 1.0f / (focalLength * (far - near));
-    Matrix4 projection = Matrix4_diagonal(1.0);
-    projection.elements[5] = ratio;
-    projection.elements[10] = far * divider;
-    projection.elements[11] = -far * near * divider;
-    projection.elements[14] = 1.0f / focalLength;
-    projection.elements[15] = 1.0;
+    Matrix4 view = Matrix4_diagonal(1.0);
     Uniforms uniforms = {
+      .matrices.model = Matrix4_transpose(Matrix4_diagonal(1.0)),
       .matrices.view = Matrix4_transpose(view),
-      .matrices.projection = Matrix4_transpose(projection),
+      .matrices.projection = Matrix4_transpose(Matrix4_orthographic(-1, 1, -1, 1, -1, 1)),
       .time = 0.0f,
       .color = {0.0f, 1.0f, 0.4f, 1.0f},
     };
-    Matrix4 scaling = Matrix4_diagonal(0.3);
-    scaling.elements[15] = 1.0;
-    translation = Matrix4_diagonal(1.0);
-    translation.elements[3] = 0.5f;
     while (!glfwWindowShouldClose(window)) {
       glfwPollEvents();
       WGPUTextureView nextTexture = wgpuSwapChainGetCurrentTextureView(swapChain);
@@ -487,15 +463,6 @@ bool basic3d_texturing_first() {
         break;
       }
       uniforms.time = (float)glfwGetTime();
-      rotation = Matrix4_diagonal(1.0);
-      float c1 = cos(uniforms.time);
-      float s1 = sin(uniforms.time);
-      rotation.elements[0] = c1;
-      rotation.elements[1] = s1;
-      rotation.elements[4] = -s1;
-      rotation.elements[5] = c1;
-      uniforms.matrices.model = Matrix4_transpose(
-        Matrix4_multiply(rotation, Matrix4_multiply(translation, scaling)));
       wgpuQueueWriteBuffer(queue, uniformBuffer, 0, &uniforms, sizeof(Uniforms));
       WGPUCommandEncoderDescriptor commandEncoderDesc = {
         .nextInChain = 0,

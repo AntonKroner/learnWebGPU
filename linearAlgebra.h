@@ -13,6 +13,13 @@ Matrix4 Matrix4_diagonal(float value);
 Matrix4 Matrix4_transpose(Matrix4 matrix);
 Matrix4 Matrix4_add(Matrix4 a, Matrix4 b);
 Matrix4 Matrix4_multiply(Matrix4 a, Matrix4 b);
+Matrix4 Matrix4_orthographic(
+  int left,
+  int right,
+  int bottom,
+  int top,
+  float near,
+  float far);
 void Matrix4_print(Matrix4 matrix);
 Vector4 Vector4_from(float values[static 4]);
 Vector4 Vector4_fill(float value);

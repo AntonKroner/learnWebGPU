@@ -24,7 +24,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 	var out: VertexOutput;
 	out.position = uniforms.matrices.projection * uniforms.matrices.view * uniforms.matrices.model * vec4f(in.position, 1.0);	
 	out.color = in.color;
-	out.normal = in.normal;
+	out.normal = (uniforms.matrices.model * vec4f(in.normal, 0.0)).xyz;;
 	return out;
 }
 @group(0) @binding(1) var gradientTexture: texture_2d<f32>;
