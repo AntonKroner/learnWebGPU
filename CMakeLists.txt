@@ -23,6 +23,7 @@ add_executable(webgpu.exe
 	01basic3d/03meshes/depth.c
 	01basic3d/03meshes/transformation.c
 	01basic3d/04texturing/first.c
+	01basic3d/04texturing/mapping.c
 )
 set_target_properties(webgpu.exe PROPERTIES
     C_STANDARD 23

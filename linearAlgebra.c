@@ -1,5 +1,6 @@
 #include "linearAlgebra.h"
 #include <stdio.h>
+#include <tgmath.h>
 
 Matrix4 Matrix4_fill(float value) {
   Matrix4 result = { 0 };
@@ -78,6 +79,37 @@ Matrix4 Matrix4_orthographic(
   result.elements[15] = 1.0;
   return result;
 }
+Matrix4 Matrix4_perspective(float fov, float aspect, float near, float far) {
+  Matrix4 result = Matrix4_fill(0.0);
+  const float range = 1.0f / tan(M_PI * fov / 360.0f);
+  result.elements[0] = range / aspect;
+  result.elements[5] = aspect;
+  result.elements[10] = -(far + near) / (far - near);
+  result.elements[14] = -(2.0f * far * near) / (far - near);
+  result.elements[11] = -1.0f;
+  return result;
+}
+Matrix4 Matrix4_lookAt(Vector3 position, Vector3 target, Vector3 up) {
+  const Vector3 forward =
+    Vector3_normalize(Vector3_add(target, Vector3_scale(-1.0, position)));
+  const Vector3 right = Vector3_normalize(Vector3_cross(forward, up));
+  const Vector3 u = Vector3_normalize(Vector3_cross(right, forward));
+  Matrix4 ori = Matrix4_diagonal(1.0);
+  ori.elements[0] = right.components[0];
+  ori.elements[4] = right.components[1];
+  ori.elements[8] = right.components[2];
+  ori.elements[1] = u.components[0];
+  ori.elements[5] = u.components[1];
+  ori.elements[9] = u.components[2];
+  ori.elements[2] = -forward.components[0];
+  ori.elements[6] = -forward.components[1];
+  ori.elements[10] = -forward.components[2];
+  Matrix4 p = Matrix4_diagonal(1.0);
+  p.elements[3] = -position.components[0];
+  p.elements[7] = -position.components[1];
+  p.elements[11] = -position.components[2];
+  return Matrix4_multiply(ori, p);
+}
 Vector4 Vector4_from(float values[static 4]) {
   Vector4 result = {
     .components = {values[0], values[1], values[2], values[3]}
@@ -123,6 +155,71 @@ Vector4 Vector4_transform(Matrix4 matrix, Vector4 v) {
 void Vector4_print(Vector4 vector) {
   printf("[ ");
   for (size_t n = 0; 4 > n; n++) {
+    printf("%f, ", vector.components[n]);
+  }
+  printf(" ]\n");
+}
+Vector3 Vector3_make(float x, float y, float z) {
+  Vector3 result = {
+    .components = {x, y, z}
+  };
+  return result;
+}
+Vector3 Vector3_from(float values[static 3]) {
+  Vector3 result = {
+    .components = {values[0], values[1], values[2]}
+  };
+  return result;
+}
+Vector3 Vector3_fill(float value) {
+  Vector3 result = {
+    .components = {value, value, value}
+  };
+  return result;
+}
+Vector3 Vector3_scale(float scalar, Vector3 vector) {
+  Vector3 result = { 0 };
+  for (size_t n = 0; 3 > n; n++) {
+    result.components[n] = vector.components[n] * scalar;
+  }
+  return result;
+}
+Vector3 Vector3_add(Vector3 a, Vector3 b) {
+  Vector3 result = { 0 };
+  for (size_t n = 0; 3 > n; n++) {
+    result.components[n] = a.components[n] + b.components[n];
+  }
+  return result;
+}
+float Vector3_inner(Vector3 a, Vector3 b) {
+  float result = 0;
+  for (size_t n = 0; 3 > n; n++) {
+    result += a.components[n] * b.components[n];
+  }
+  return result;
+}
+Vector3 Vector3_normalize(Vector3 v) {
+  const float length = sqrt(Vector3_inner(v, v));
+  const Vector3 result = {
+    .components = {v.components[0] / length,
+                   v.components[1] / length,
+                   v.components[2] / length}
+  };
+  return result;
+}
+Vector3 Vector3_cross(Vector3 v, Vector3 w) {
+  Vector3 result = { 0 };
+  result.components[0] =
+    v.components[1] * w.components[2] - v.components[2] * w.components[1];
+  result.components[1] =
+    v.components[2] * w.components[0] - v.components[0] * w.components[2];
+  result.components[2] =
+    v.components[0] * w.components[1] - v.components[1] * w.components[0];
+  return result;
+}
+void Vector3_print(Vector3 vector) {
+  printf("[ ");
+  for (size_t n = 0; 3 > n; n++) {
     printf("%f, ", vector.components[n]);
   }
   printf(" ]\n");
