@@ -13,10 +13,12 @@
 #include "../../linearAlgebra.h"
 
 typedef float Vec3[3];
+typedef float Vec2[2];
 typedef struct {
     Vec3 position;
     Vec3 normal;
     Vec3 color;
+    Vec2 uv;
 } Vertex;
 typedef struct {
     Vertex* vertices;
@@ -89,6 +91,8 @@ static Model Model_load(char* const file) {
       result.vertices[i].normal[0] = attributes.normals[3 * face.vn_idx];
       result.vertices[i].normal[1] = -1 * attributes.normals[3 * face.vn_idx + 2];
       result.vertices[i].normal[2] = attributes.normals[3 * face.vn_idx + 1];
+      result.vertices[i].uv[0] = attributes.texcoords[2 * face.vt_idx];
+      result.vertices[i].uv[1] = 1 - attributes.texcoords[2 * face.vt_idx + 1];
     }
     tinyobj_attrib_free(&attributes);
     if (shapes) {
@@ -115,7 +119,7 @@ static bool setWindowHints() {
 static void limitsSet(
   WGPURequiredLimits required[static 1],
   WGPUSupportedLimits supported) {
-  required->limits.maxVertexAttributes = 3;
+  required->limits.maxVertexAttributes = 4;
   required->limits.maxVertexBuffers = 2;
   required->limits.maxBufferSize = 16 * sizeof(Vertex);
   required->limits.maxVertexBufferArrayStride = sizeof(Vertex);
@@ -123,7 +127,7 @@ static void limitsSet(
     supported.limits.minStorageBufferOffsetAlignment;
   required->limits.minUniformBufferOffsetAlignment =
     supported.limits.minUniformBufferOffsetAlignment;
-  required->limits.maxInterStageShaderComponents = 6;
+  required->limits.maxInterStageShaderComponents = 8;
   required->limits.maxBindGroups = 1;
   required->limits.maxUniformBuffersPerShaderStage = 1;
   required->limits.maxUniformBufferBindingSize = 16 * 4 * sizeof(float);
@@ -180,7 +184,7 @@ bool basic3d_texturing_mapping() {
   WGPUInstanceDescriptor descriptor = { .nextInChain = 0 };
   WGPUInstance instance = 0;
   GLFWwindow* window = 0;
-  const Model model = Model_load(RESOURCE_DIR "/texturing/plane.obj");
+  const Model model = Model_load(RESOURCE_DIR "/texturing/cube.obj");
   if (!glfwInit()) {
     perror("Could not initialize GLFW!");
   }
@@ -390,10 +394,16 @@ bool basic3d_texturing_mapping() {
         .shaderLocation = 2,
        .format = WGPUVertexFormat_Float32x3,
        .offset = offsetof(Vertex, color),
+       },
+      {
+       // uv coordinates
+        .shaderLocation = 3,
+       .format = WGPUVertexFormat_Float32x2,
+       .offset = offsetof(Vertex, uv),
        }
     };
     WGPUVertexBufferLayout bufferLayout = {
-      .attributeCount = 3,
+      .attributeCount = 4,
       .attributes = vertexAttributes,
       .arrayStride = sizeof(Vertex),
       .stepMode = WGPUVertexStepMode_Vertex,
@@ -450,7 +460,7 @@ bool basic3d_texturing_mapping() {
     Uniforms uniforms = {
       .matrices.model = Matrix4_transpose(Matrix4_diagonal(1.0)),
       .matrices.view = Matrix4_transpose(Matrix4_lookAt(
-        Vector3_make(-0.5f, -2.5f, 2.0f),
+        Vector3_make(-2.0f, -3.0f, 2.0f),
         Vector3_fill(0.0f),
         Vector3_make(0, 0, 1.0f))),
       .matrices.projection =
