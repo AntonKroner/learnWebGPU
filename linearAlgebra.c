@@ -80,13 +80,13 @@ Matrix4 Matrix4_orthographic(
   return result;
 }
 Matrix4 Matrix4_perspective(float fov, float aspect, float near, float far) {
-  Matrix4 result = Matrix4_fill(0.0);
+  Matrix4 result = { 0 };
   const float range = 1.0f / tan(M_PI * fov / 360.0f);
   result.elements[0] = range / aspect;
   result.elements[5] = aspect;
   result.elements[10] = -(far + near) / (far - near);
-  result.elements[14] = -(2.0f * far * near) / (far - near);
-  result.elements[11] = -1.0f;
+  result.elements[11] = -(2.0f * far * near) / (far - near);
+  result.elements[14] = -1.0f;
   return result;
 }
 Matrix4 Matrix4_lookAt(Vector3 position, Vector3 target, Vector3 up) {
@@ -96,13 +96,13 @@ Matrix4 Matrix4_lookAt(Vector3 position, Vector3 target, Vector3 up) {
   const Vector3 u = Vector3_normalize(Vector3_cross(right, forward));
   Matrix4 ori = Matrix4_diagonal(1.0);
   ori.elements[0] = right.components[0];
-  ori.elements[4] = right.components[1];
-  ori.elements[8] = right.components[2];
-  ori.elements[1] = u.components[0];
+  ori.elements[1] = right.components[1];
+  ori.elements[2] = right.components[2];
+  ori.elements[4] = u.components[0];
   ori.elements[5] = u.components[1];
-  ori.elements[9] = u.components[2];
-  ori.elements[2] = -forward.components[0];
-  ori.elements[6] = -forward.components[1];
+  ori.elements[6] = u.components[2];
+  ori.elements[8] = -forward.components[0];
+  ori.elements[9] = -forward.components[1];
   ori.elements[10] = -forward.components[2];
   Matrix4 p = Matrix4_diagonal(1.0);
   p.elements[3] = -position.components[0];
@@ -224,3 +224,19 @@ void Vector3_print(Vector3 vector) {
   }
   printf(" ]\n");
 }
+// #define linearAlgebraUnitTests
+#ifdef linearAlgebraUnitTests
+  #include <stdlib.h>
+
+int main() {
+  const Vector3 r1 = Vector3_make(1, 0, 0);
+  const Vector3 r2 = Vector3_make(0, 1, 0);
+  const Vector3 r3 = Vector3_cross(r1, r2);
+  printf("[1, 0, 0] x [0, 1, 0] = ");
+  Vector3_print(r3);
+  printf("normalize([2, 2, 0]) =");
+  Vector3_print(Vector3_normalize(Vector3_make(2, 2, 0)));
+
+  return EXIT_SUCCESS;
+}
+#endif

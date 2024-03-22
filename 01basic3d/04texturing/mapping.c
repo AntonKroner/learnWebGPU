@@ -453,8 +453,8 @@ bool basic3d_texturing_mapping() {
         Vector3_make(-0.5f, -2.5f, 2.0f),
         Vector3_fill(0.0f),
         Vector3_make(0, 0, 1.0f))),
-      .matrices.projection = Matrix4_transpose(
-        Matrix4_perspective(45 * M_PI / 180, 640.0f / 480.0f, 0.01f, 100.0f)),
+      .matrices.projection =
+        Matrix4_transpose(Matrix4_perspective(45, 640.0f / 480.0f, 0.01f, 100.0f)),
       .time = 0.0f,
       .color = {0.0f, 1.0f, 0.4f, 1.0f},
     };
