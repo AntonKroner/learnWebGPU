@@ -1,12 +1,15 @@
 #ifndef device_H_
 #define device_H_
 
-#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <assert.h>
-#include "library/webgpu.h"
+#include <errno.h>
 #include <string.h>
+#include <assert.h>
+#include <tgmath.h>
+#include "library/webgpu.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "library/stb_image.h"
 
 typedef struct {
     WGPUDevice device;
@@ -171,6 +174,120 @@ void device_inspect(WGPUDevice device) {
       "- maxComputeWorkgroupsPerDimension: %u \n",
       limits.limits.maxComputeWorkgroupsPerDimension);
   }
+}
+static void writeMipMaps(
+  WGPUDevice device,
+  WGPUTexture texture,
+  WGPUExtent3D size,
+  uint32_t mipLevelCount,
+  const uint8_t* pixelsInput) {
+  WGPUQueue queue = wgpuDeviceGetQueue(device);
+  WGPUImageCopyTexture destination = {
+    .texture = texture,
+    .origin = {0, 0, 0},
+    .aspect = WGPUTextureAspect_All,
+  };
+  WGPUTextureDataLayout source = {
+    .offset = 0,
+  };
+  WGPUExtent3D mipLevelSize = size;
+  WGPUExtent3D previousMipLevelSize;
+  uint32_t pixelCount = 4 * mipLevelSize.width * mipLevelSize.height;
+  uint8_t* previousLevelPixels = calloc(pixelCount, sizeof(*previousLevelPixels));
+  uint8_t* pixels = calloc(pixelCount, sizeof(*pixels));
+  memcpy(pixels, pixelsInput, pixelCount);
+  for (uint32_t level = 0; mipLevelCount > level; ++level) {
+    if (level) {
+      for (uint32_t i = 0; mipLevelSize.width > i; ++i) {
+        for (uint32_t j = 0; mipLevelSize.height > j; ++j) {
+          uint8_t* p = &pixels[4 * (j * mipLevelSize.width + i)];
+          uint8_t* p00 = &previousLevelPixels
+                           [4 * ((2 * j + 0) * previousMipLevelSize.width + (2 * i + 0))];
+          uint8_t* p01 = &previousLevelPixels
+                           [4 * ((2 * j + 0) * previousMipLevelSize.width + (2 * i + 1))];
+          uint8_t* p10 = &previousLevelPixels
+                           [4 * ((2 * j + 1) * previousMipLevelSize.width + (2 * i + 0))];
+          uint8_t* p11 = &previousLevelPixels
+                           [4 * ((2 * j + 1) * previousMipLevelSize.width + (2 * i + 1))];
+          p[0] = (p00[0] + p01[0] + p10[0] + p11[0]) / 4;
+          p[1] = (p00[1] + p01[1] + p10[1] + p11[1]) / 4;
+          p[2] = (p00[2] + p01[2] + p10[2] + p11[2]) / 4;
+          p[3] = (p00[3] + p01[3] + p10[3] + p11[3]) / 4;
+        }
+      }
+    }
+    pixelCount = 4 * mipLevelSize.width * mipLevelSize.height;
+    destination.mipLevel = level;
+    source.bytesPerRow = 4 * mipLevelSize.width;
+    source.rowsPerImage = mipLevelSize.height;
+    wgpuQueueWriteTexture(queue, &destination, pixels, pixelCount, &source, &mipLevelSize);
+    memcpy(previousLevelPixels, pixels, pixelCount);
+    previousMipLevelSize = mipLevelSize;
+    mipLevelSize.width /= 2;
+    mipLevelSize.height /= 2;
+  }
+  free(previousLevelPixels);
+  free(pixels);
+  wgpuQueueRelease(queue);
+}
+static uint32_t bit_width(uint32_t m) {
+  if (m == 0) {
+    return 0;
+  }
+  else {
+    uint32_t w = 0;
+    while (m >>= 1) {
+      ++w;
+    }
+    return w;
+  }
+}
+WGPUTexture device_Texture_load(
+  WGPUDevice device,
+  const char* const path,
+  WGPUTextureView* view) {
+  int width = 0;
+  int height = 0;
+  int channels = 0;
+  uint8_t* pixels = stbi_load(path, &width, &height, &channels, 4);
+  if (!pixels) {
+    return 0;
+  }
+  WGPUTextureDescriptor textureDescriptor = {
+    .nextInChain = 0,
+    .dimension = WGPUTextureDimension_2D,
+    .format =
+      WGPUTextureFormat_RGBA8Unorm, // by convention for bmp, png and jpg file. Be careful with other formats,
+    .mipLevelCount =
+      bit_width(fmax(textureDescriptor.size.width, textureDescriptor.size.height)),
+    .sampleCount = 1,
+    .size = {(unsigned int)width, (unsigned int)height, 1},
+    .usage = WGPUTextureUsage_TextureBinding | WGPUTextureUsage_CopyDst,
+    .viewFormatCount = 0,
+    .viewFormats = 0,
+  };
+  WGPUTexture texture = wgpuDeviceCreateTexture(device, &textureDescriptor);
+  writeMipMaps(
+    device,
+    texture,
+    textureDescriptor.size,
+    textureDescriptor.mipLevelCount,
+    pixels);
+  stbi_image_free(pixels);
+  if (view) {
+    WGPUTextureViewDescriptor viewDescriptor = {
+      .aspect = WGPUTextureAspect_All,
+      .baseArrayLayer = 0,
+      .arrayLayerCount = 1,
+      .baseMipLevel = 0,
+      .mipLevelCount = textureDescriptor.mipLevelCount,
+      .dimension = WGPUTextureViewDimension_2D,
+      .format = textureDescriptor.format,
+    };
+    printf("texture view");
+    *view = wgpuTextureCreateView(texture, &viewDescriptor);
+  }
+  return texture;
 }
 
 #endif // device_H_

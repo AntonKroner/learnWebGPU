@@ -18,5 +18,6 @@ bool basic3d_meshes_transformation();
 
 bool basic3d_texturing_first();
 bool basic3d_texturing_mapping();
+bool basic3d_texturing_sampler();
 
 #endif // basic3d_H_

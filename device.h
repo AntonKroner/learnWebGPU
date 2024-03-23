@@ -5,6 +5,10 @@
 
 WGPUDevice device_request(WGPUAdapter adapter, const WGPUDeviceDescriptor* descriptor);
 WGPUShaderModule device_ShaderModule(WGPUDevice device, const char* path);
+WGPUTexture device_Texture_load(
+  WGPUDevice device,
+  const char* const path,
+  WGPUTextureView* view);
 void device_inspect(WGPUDevice device);
 
 #endif // device_H_
