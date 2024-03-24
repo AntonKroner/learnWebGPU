@@ -220,6 +220,7 @@ bool basic3d_texturing_sampler() {
       .defaultQueue = { .label = "default queueuue" }
     };
     WGPUDevice device = device_request(adapter, &deviceDescriptor);
+    wgpuAdapterRelease(adapter);
     WGPUQueue queue = wgpuDeviceGetQueue(device);
     WGPUTextureView textureView;
     WGPUTexture texture = device_Texture_load(
@@ -477,7 +478,6 @@ bool basic3d_texturing_sampler() {
         .stencilStoreOp = WGPUStoreOp_Undefined,
         .stencilReadOnly = true,
       };
-
       WGPURenderPassDescriptor renderPassDesc = {
         .nextInChain = 0,
         .colorAttachmentCount = 1,
@@ -527,7 +527,6 @@ bool basic3d_texturing_sampler() {
     wgpuShaderModuleRelease(shaderModule);
     wgpuSwapChainRelease(swapChain);
     wgpuDeviceRelease(device);
-    wgpuAdapterRelease(adapter);
     wgpuInstanceRelease(instance);
     wgpuSurfaceRelease(surface);
     glfwDestroyWindow(window);

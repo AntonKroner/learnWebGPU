@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <getopt.h>
 #include "./01basic3d/basic3d.h"
+#include "./Application.h"
 
 int main(int argc, char* argv[static argc + 1]) {
   int result = EXIT_FAILURE;
@@ -27,6 +28,10 @@ int main(int argc, char* argv[static argc + 1]) {
         printf("input: %s\n", optarg);
     }
   }
-  basic3d_texturing_sampler();
+  Application* application = Application_create();
+  while (!Application_shouldClose(application)) {
+    Application_render(application);
+  }
+  Application_destroy(application);
   return result;
 }

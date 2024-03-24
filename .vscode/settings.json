@@ -28,7 +28,9 @@
 		"*.h": "c"
 	},
 	"cSpell.words": [
+		"Framebuffer",
 		"glfw",
+		"mipmap",
 		"multisample",
 		"multisampled",
 		"Renderable",
