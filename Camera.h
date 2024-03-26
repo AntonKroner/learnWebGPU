@@ -20,12 +20,12 @@ typedef struct {
     bool dragging;
 } Camera;
 
-Matrix4 viewGet(Camera camera);
-void move(Camera* camera, float x, float y);
-void activate(Camera* camera, int button, int action, float x, float y);
-void zoom(Camera* camera, float x, float y);
+Matrix4 Camera_viewGet(Camera camera);
+void Camera_move(Camera* camera, float x, float y);
+void Camera_activate(Camera* camera, int button, int action, float x, float y);
+void Camera_zoom(Camera* camera, float x, float y);
 
-Matrix4 viewGet(Camera camera) {
+Matrix4 Camera_viewGet(Camera camera) {
   float cx = cos(camera.angles.x);
   float sx = sin(camera.angles.x);
   float cy = cos(camera.angles.y);
@@ -35,13 +35,13 @@ Matrix4 viewGet(Camera camera) {
 }
 const float sensitivity = 0.01f;
 const float scrollSensitivity = 0.1f;
-void move(Camera* camera, float x, float y) {
+void Camera_move(Camera camera[static 1], float x, float y) {
   if (camera->dragging) {
     camera->angles.x = sensitivity * (-x - camera->position.x);
     camera->angles.y = sensitivity * (y - camera->position.y);
   }
 }
-void activate(Camera* camera, int button, int action, float x, float y) {
+void Camera_activate(Camera camera[static 1], int button, int action, float x, float y) {
   if (button == GLFW_MOUSE_BUTTON_LEFT) {
     switch (action) {
       case GLFW_PRESS:
@@ -55,7 +55,7 @@ void activate(Camera* camera, int button, int action, float x, float y) {
     }
   }
 }
-void zoom(Camera* camera, float /*x*/, float y) {
+void Camera_zoom(Camera camera[static 1], float /*x*/, float y) {
   camera->zoom += scrollSensitivity * y;
 }
 

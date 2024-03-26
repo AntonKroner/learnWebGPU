@@ -12,6 +12,7 @@
 #include "./adapter.h"
 #include "./device.h"
 #include "linearAlgebra.h"
+#include "Camera.h"
 
 typedef float Vec3[3];
 typedef float Vec2[2];
@@ -62,6 +63,7 @@ typedef struct {
     WGPURenderPipeline pipeline;
     WGPUBindGroup bindGroup;
     Uniforms uniforms;
+    Camera camera;
 } Application;
 
 Application* Application_create();
@@ -258,16 +260,24 @@ static void onResize(GLFWwindow* window, int width, int height) {
 static void onMouseMove(GLFWwindow* window, double x, double y) {
   Application* application = (Application*)glfwGetWindowUserPointer(window);
   if (application) {
+    Camera_move(&application->camera, (float)x, (float)y);
+    application->uniforms.matrices.view = Camera_viewGet(application->camera);
   }
 }
-static void onMouseButton(GLFWwindow* window, int button, int action, int mods) {
+static void onMouseButton(GLFWwindow* window, int button, int action, int /* mods*/) {
   Application* application = (Application*)glfwGetWindowUserPointer(window);
   if (application) {
+    double x = 0;
+    double y = 0;
+    glfwGetCursorPos(window, &x, &y);
+    Camera_activate(&application->camera, button, action, (float)x, (float)y);
   }
 }
 static void onMouseScroll(GLFWwindow* window, double x, double y) {
   Application* application = (Application*)glfwGetWindowUserPointer(window);
   if (application) {
+    Camera_zoom(&application->camera, (float)x, (float)y);
+    application->uniforms.matrices.view = Camera_viewGet(application->camera);
   }
 }
 static bool setWindowHints() {
@@ -305,6 +315,9 @@ Application* Application_create() {
   else {
     glfwSetWindowUserPointer(result->window, result);
     glfwSetFramebufferSizeCallback(result->window, onResize);
+    glfwSetCursorPosCallback(result->window, onMouseMove);
+    glfwSetMouseButtonCallback(result->window, onMouseButton);
+    glfwSetScrollCallback(result->window, onMouseScroll);
     result->surface = glfwGetWGPUSurface(result->instance, result->window);
     WGPURequestAdapterOptions adapterOptions = {
       .nextInChain = 0,
