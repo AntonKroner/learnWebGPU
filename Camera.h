@@ -21,9 +21,9 @@ typedef struct {
 } Camera;
 
 Matrix4 Camera_viewGet(Camera camera);
-void Camera_move(Camera* camera, float x, float y);
-void Camera_activate(Camera* camera, int button, int action, float x, float y);
-void Camera_zoom(Camera* camera, float x, float y);
+void Camera_move(Camera camera[static 1], float x, float y);
+void Camera_activate(Camera camera[static 1], int button, int action, float x, float y);
+void Camera_zoom(Camera camera[static 1], float x, float y);
 
 Matrix4 Camera_viewGet(Camera camera) {
   float cx = cos(camera.angles.x);
@@ -31,7 +31,7 @@ Matrix4 Camera_viewGet(Camera camera) {
   float cy = cos(camera.angles.y);
   float sy = sin(camera.angles.y);
   Vector3 position = Vector3_scale(exp(-camera.zoom), Vector3_make(cx * cy, sx * cy, sy));
-  return Matrix4_lookAt(position, Vector3_fill(0.0f), Vector3_make(0, 0, 1.0f));
+  return Matrix4_lookAt(position, Vector3_make(0, 0, 1.0f), Vector3_fill(1.0f));
 }
 const float sensitivity = 0.01f;
 const float scrollSensitivity = 0.1f;
@@ -55,7 +55,7 @@ void Camera_activate(Camera camera[static 1], int button, int action, float x, f
     }
   }
 }
-void Camera_zoom(Camera camera[static 1], float /*x*/, float y) {
+void Camera_zoom(Camera camera[static 1], float x, float y) {
   camera->zoom += scrollSensitivity * y;
 }
 

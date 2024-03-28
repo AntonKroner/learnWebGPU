@@ -261,7 +261,8 @@ static void onMouseMove(GLFWwindow* window, double x, double y) {
   Application* application = (Application*)glfwGetWindowUserPointer(window);
   if (application) {
     Camera_move(&application->camera, (float)x, (float)y);
-    application->uniforms.matrices.view = Camera_viewGet(application->camera);
+    application->uniforms.matrices.view =
+      Matrix4_transpose(Camera_viewGet(application->camera));
   }
 }
 static void onMouseButton(GLFWwindow* window, int button, int action, int /* mods*/) {
@@ -277,7 +278,8 @@ static void onMouseScroll(GLFWwindow* window, double x, double y) {
   Application* application = (Application*)glfwGetWindowUserPointer(window);
   if (application) {
     Camera_zoom(&application->camera, (float)x, (float)y);
-    application->uniforms.matrices.view = Camera_viewGet(application->camera);
+    application->uniforms.matrices.view =
+      Matrix4_transpose(Camera_viewGet(application->camera));
   }
 }
 static bool setWindowHints() {
@@ -557,6 +559,9 @@ Application* Application_create() {
       .entries = bindings,
     };
     result->bindGroup = wgpuDeviceCreateBindGroup(result->device, &bindGroupDescriptor);
+    result->camera.position.x = -2.0f;
+    result->camera.position.y = -3.0f;
+    result->camera.zoom = -1.2;
     Uniforms uniforms = {
       .matrices.model = Matrix4_transpose(Matrix4_diagonal(1.0)),
       .matrices.view = Matrix4_transpose(Matrix4_lookAt(
