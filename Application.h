@@ -3,29 +3,18 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
-#include <tgmath.h>
-#include "library/webgpu.h"
+#include "./library/webgpu.h"
 #include "./library/glfw3webgpu/glfw3webgpu.h"
 #include "./library/glfw/include/GLFW/glfw3.h"
-#include "./library/tinyobj_loader_c.h"
 #include "./adapter.h"
 #include "./device.h"
-#include "linearAlgebra.h"
-#include "Camera.h"
+#include "./Model.h"
+#include "./linearAlgebra.h"
+#include "./Camera.h"
 
-typedef float Vec3[3];
-typedef float Vec2[2];
-typedef struct {
-    Vec3 position;
-    Vec3 normal;
-    Vec3 color;
-    Vec2 uv;
-} Vertex;
-typedef struct {
-    Vertex* vertices;
-    size_t vertexCount;
-} Model;
+#define WIDTH (640)
+#define HEIGHT (480)
+
 typedef struct {
     struct {
         Matrix4 projection;
@@ -67,107 +56,10 @@ typedef struct {
 } Application;
 
 Application* Application_create();
-bool Application_shouldClose(Application* application);
+bool Application_shouldClose(Application application[static 1]);
 void Application_render(Application application[static 1]);
 void Application_destroy(Application* application);
 
-static void loadFile(
-  void* /* ctx */,
-  const char* filename,
-  const int /* is_mtl */,
-  const char* /* obj_filename */,
-  char** buffer,
-  size_t* length) {
-  long string_size = 0, read_size = 0;
-  FILE* handler = fopen(filename, "r");
-  if (handler) {
-    fseek(handler, 0, SEEK_END);
-    string_size = ftell(handler);
-    rewind(handler);
-    *buffer = (char*)malloc(sizeof(char) * (string_size + 1));
-    read_size = fread(*buffer, sizeof(char), (size_t)string_size, handler);
-    (*buffer)[string_size] = '\0';
-    if (string_size != read_size) {
-      free(*buffer);
-      *buffer = NULL;
-    }
-    fclose(handler);
-  }
-  *length = read_size;
-}
-static Model Model_load(char* const file) {
-  tinyobj_shape_t* shapes = 0;
-  tinyobj_material_t* materials = 0;
-  tinyobj_attrib_t attributes;
-  size_t shapesCount;
-  size_t materialsCount;
-  tinyobj_attrib_init(&attributes);
-  Model result = { .vertexCount = 0, .vertices = 0 };
-  const int loaded = tinyobj_parse_obj(
-    &attributes,
-    &shapes,
-    &shapesCount,
-    &materials,
-    &materialsCount,
-    file,
-    loadFile,
-    0,
-    TINYOBJ_FLAG_TRIANGULATE);
-  if (loaded == TINYOBJ_SUCCESS) {
-    result.vertexCount = attributes.num_faces;
-    result.vertices = calloc(attributes.num_faces, sizeof(Vertex));
-    for (size_t i = 0; attributes.num_faces > i; i++) {
-      const tinyobj_vertex_index_t face = attributes.faces[i];
-      result.vertices[i].color[0] = 1.0;
-      result.vertices[i].color[1] = 1.0;
-      result.vertices[i].color[2] = 1.0;
-      result.vertices[i].position[0] = attributes.vertices[3 * face.v_idx];
-      result.vertices[i].position[1] = -1 * attributes.vertices[3 * face.v_idx + 2];
-      result.vertices[i].position[2] = attributes.vertices[3 * face.v_idx + 1];
-      result.vertices[i].normal[0] = attributes.normals[3 * face.vn_idx];
-      result.vertices[i].normal[1] = -1 * attributes.normals[3 * face.vn_idx + 2];
-      result.vertices[i].normal[2] = attributes.normals[3 * face.vn_idx + 1];
-      result.vertices[i].uv[0] = attributes.texcoords[2 * face.vt_idx];
-      result.vertices[i].uv[1] = 1 - attributes.texcoords[2 * face.vt_idx + 1];
-    }
-    tinyobj_attrib_free(&attributes);
-    if (shapes) {
-      tinyobj_shapes_free(shapes, shapesCount);
-    }
-    if (materials) {
-      printf("materials count: %zu\n", materialsCount);
-      tinyobj_materials_free(materials, materialsCount);
-    }
-  }
-  return result;
-}
-static void Model_unload(Model* model) {
-  if (model->vertices) {
-    free(model->vertices);
-  }
-  model->vertexCount = 0;
-}
-static void limitsSet(
-  WGPURequiredLimits required[static 1],
-  WGPUSupportedLimits supported) {
-  required->limits.maxVertexAttributes = 4;
-  required->limits.maxVertexBuffers = 2;
-  required->limits.maxBufferSize = 150000 * 44; // FIXME
-  required->limits.maxVertexBufferArrayStride = 44; // FIXME
-  required->limits.minStorageBufferOffsetAlignment =
-    supported.limits.minStorageBufferOffsetAlignment;
-  required->limits.minUniformBufferOffsetAlignment =
-    supported.limits.minUniformBufferOffsetAlignment;
-  required->limits.maxInterStageShaderComponents = 8;
-  required->limits.maxBindGroups = 1;
-  required->limits.maxUniformBuffersPerShaderStage = 1;
-  required->limits.maxUniformBufferBindingSize = 16 * 4 * sizeof(float);
-  required->limits.maxTextureDimension1D = 2048;
-  required->limits.maxTextureDimension2D = 2048;
-  required->limits.maxTextureArrayLayers = 1;
-  required->limits.maxSampledTexturesPerShaderStage = 1;
-  required->limits.maxSamplersPerShaderStage = 1;
-}
 static WGPUDepthStencilState DepthStencilState_make() {
   WGPUStencilFaceState face = {
     .compare = WGPUCompareFunction_Always,
@@ -211,48 +103,112 @@ static WGPUBindGroupLayoutEntry BindGroupLayoutEntry_make() {
   };
   return result;
 }
+static void buffers_attach(Application application[static 1], size_t vertexCount) {
+  WGPUBufferDescriptor vertexBufferDescriptor = {
+    .nextInChain = 0,
+    .label = "vertex buffer",
+    .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex,
+    .mappedAtCreation = false,
+    .size = vertexCount * sizeof(Model_Vertex),
+  };
+  application->buffers.vertex =
+    wgpuDeviceCreateBuffer(application->device, &vertexBufferDescriptor);
+  WGPUBufferDescriptor uniformBufferDescriptor = {
+    .nextInChain = 0,
+    .label = "uniform buffer",
+    .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform,
+    .mappedAtCreation = false,
+    .size = sizeof(Uniforms),
+  };
+  application->buffers.uniform =
+    wgpuDeviceCreateBuffer(application->device, &uniformBufferDescriptor);
+}
+static void buffers_detach(Application application[static 1]) {
+  wgpuBufferDestroy(application->buffers.vertex);
+  wgpuBufferRelease(application->buffers.vertex);
+  wgpuBufferDestroy(application->buffers.uniform);
+  wgpuBufferRelease(application->buffers.uniform);
+}
+static void texture_attach(Application application[static 1]) {
+  application->texture.texture = device_Texture_load(
+    application->device,
+    RESOURCE_DIR "/texturing/fourareen/fourareen2K_albedo.jpg",
+    &application->texture.view);
+  WGPUSamplerDescriptor samplerDescriptor = {
+    .addressModeU = WGPUAddressMode_ClampToEdge,
+    .addressModeV = WGPUAddressMode_ClampToEdge,
+    .addressModeW = WGPUAddressMode_ClampToEdge,
+    .magFilter = WGPUFilterMode_Linear,
+    .minFilter = WGPUFilterMode_Linear,
+    .mipmapFilter = WGPUMipmapFilterMode_Linear,
+    .lodMinClamp = 0.0f,
+    .lodMaxClamp = 1.0f,
+    .compare = WGPUCompareFunction_Undefined,
+    .maxAnisotropy = 1,
+  };
+  application->texture.sampler =
+    wgpuDeviceCreateSampler(application->device, &samplerDescriptor);
+}
+static void texture_detach(Application application[static 1]) {
+  wgpuTextureDestroy(application->texture.texture);
+  wgpuTextureRelease(application->texture.texture);
+  wgpuTextureViewRelease(application->texture.view);
+  wgpuSamplerRelease(application->texture.sampler);
+}
+static void depthBuffer_attach(Application application[static 1], int width, int height) {
+  application->depth.format = WGPUTextureFormat_Depth24Plus;
+  WGPUTextureDescriptor depthTextureDescriptor = {
+    .dimension = WGPUTextureDimension_2D,
+    .format = application->depth.format,
+    .mipLevelCount = 1,
+    .sampleCount = 1,
+    .size = {width, height, 1},
+    .usage = WGPUTextureUsage_RenderAttachment,
+    .viewFormatCount = 1,
+    .viewFormats = &application->depth.format,
+  };
+  application->depth.texture =
+    wgpuDeviceCreateTexture(application->device, &depthTextureDescriptor);
+  WGPUTextureViewDescriptor depthTextureViewDescriptor = {
+    .aspect = WGPUTextureAspect_DepthOnly,
+    .baseArrayLayer = 0,
+    .arrayLayerCount = 1,
+    .baseMipLevel = 0,
+    .mipLevelCount = 1,
+    .dimension = WGPUTextureViewDimension_2D,
+    .format = application->depth.format,
+  };
+  application->depth.view =
+    wgpuTextureCreateView(application->depth.texture, &depthTextureViewDescriptor);
+}
+static void depthBuffer_detach(Application application[static 1]) {
+  wgpuTextureDestroy(application->depth.texture);
+  wgpuTextureRelease(application->depth.texture);
+  wgpuTextureViewRelease(application->depth.view);
+}
+static void swapChain_attach(Application application[static 1], int width, int height) {
+  if (application->swapChain) {
+    wgpuSwapChainRelease(application->swapChain);
+  }
+  WGPUSwapChainDescriptor swapChainDescriptor = {
+    .nextInChain = 0,
+    .width = width,
+    .height = height,
+    .usage = WGPUTextureUsage_RenderAttachment,
+    .format = WGPUTextureFormat_BGRA8Unorm,
+    .presentMode = WGPUPresentMode_Fifo,
+  };
+  application->swapChain = wgpuDeviceCreateSwapChain(
+    application->device,
+    application->surface,
+    &swapChainDescriptor);
+}
 static void onResize(GLFWwindow* window, int width, int height) {
   Application* application = (Application*)glfwGetWindowUserPointer(window);
   if (application) {
-    wgpuTextureDestroy(application->depth.texture);
-    wgpuTextureRelease(application->depth.texture);
-    wgpuTextureViewRelease(application->depth.view);
-    WGPUTextureDescriptor depthTextureDescriptor = {
-      .dimension = WGPUTextureDimension_2D,
-      .format = application->depth.format,
-      .mipLevelCount = 1,
-      .sampleCount = 1,
-      .size = {width, height, 1},
-      .usage = WGPUTextureUsage_RenderAttachment,
-      .viewFormatCount = 1,
-      .viewFormats = &application->depth.format,
-    };
-    application->depth.texture =
-      wgpuDeviceCreateTexture(application->device, &depthTextureDescriptor);
-    WGPUTextureViewDescriptor depthTextureViewDescriptor = {
-      .aspect = WGPUTextureAspect_DepthOnly,
-      .baseArrayLayer = 0,
-      .arrayLayerCount = 1,
-      .baseMipLevel = 0,
-      .mipLevelCount = 1,
-      .dimension = WGPUTextureViewDimension_2D,
-      .format = application->depth.format,
-    };
-    application->depth.view =
-      wgpuTextureCreateView(application->depth.texture, &depthTextureViewDescriptor);
-    wgpuSwapChainRelease(application->swapChain);
-    WGPUSwapChainDescriptor swapChainDescriptor = {
-      .nextInChain = 0,
-      .width = width,
-      .height = height,
-      .usage = WGPUTextureUsage_RenderAttachment,
-      .format = WGPUTextureFormat_BGRA8Unorm,
-      .presentMode = WGPUPresentMode_Fifo,
-    };
-    application->swapChain = wgpuDeviceCreateSwapChain(
-      application->device,
-      application->surface,
-      &swapChainDescriptor);
+    swapChain_attach(application, width, height);
+    depthBuffer_detach(application);
+    depthBuffer_attach(application, width, height);
     application->uniforms.matrices.projection = Matrix4_transpose(
       Matrix4_perspective(45, ((float)width / (float)height), 0.01f, 100.0f));
   }
@@ -307,7 +263,7 @@ Application* Application_create() {
   }
   else if (
     setWindowHints()
-    && !(result->window = glfwCreateWindow(640, 480, "Application", NULL, NULL))) {
+    && !(result->window = glfwCreateWindow(WIDTH, HEIGHT, "Application", NULL, NULL))) {
     wgpuInstanceRelease(result->instance);
     glfwTerminate();
     free(result);
@@ -326,102 +282,27 @@ Application* Application_create() {
       .compatibleSurface = result->surface,
     };
     WGPUAdapter adapter = adapter_request(result->instance, &adapterOptions);
-    WGPUSupportedLimits supported = { .nextInChain = 0 };
-    wgpuAdapterGetLimits(adapter, &supported);
-    WGPURequiredLimits required = { .nextInChain = 0, .limits = supported.limits };
-    limitsSet(&required, supported);
-    WGPUDeviceDescriptor deviceDescriptor = {
-      .nextInChain = 0,
-      .label = "Device 1",
-      .requiredFeaturesCount = 0,
-      .requiredLimits = &required,
-      .defaultQueue = { .label = "default queueuue" }
-    };
-    result->device = device_request(adapter, &deviceDescriptor);
+    result->device = device_request(adapter);
     wgpuAdapterRelease(adapter);
     result->queue = wgpuDeviceGetQueue(result->device);
-    WGPUSwapChainDescriptor swapChainDescriptor = {
-      .nextInChain = 0,
-      .width = 640,
-      .height = 480,
-      .usage = WGPUTextureUsage_RenderAttachment,
-      .format = WGPUTextureFormat_BGRA8Unorm,
-      .presentMode = WGPUPresentMode_Fifo,
-    };
-    result->swapChain =
-      wgpuDeviceCreateSwapChain(result->device, result->surface, &swapChainDescriptor);
+    int width = 0;
+    int height = 0;
+    glfwGetFramebufferSize(result->window, &width, &height);
+    swapChain_attach(result, WIDTH, HEIGHT);
+    texture_attach(result);
+    depthBuffer_attach(result, WIDTH, HEIGHT);
     result->shader =
       device_ShaderModule(result->device, RESOURCE_DIR "/texturing/sampler.wgsl");
-    result->texture.texture = device_Texture_load(
-      result->device,
-      RESOURCE_DIR "/texturing/fourareen/fourareen2K_albedo.jpg",
-      &result->texture.view);
     Model model = Model_load(RESOURCE_DIR "/texturing/fourareen/fourareen.obj");
     result->vertexCount = model.vertexCount;
-    WGPUBufferDescriptor vertexBufferDescriptor = {
-      .nextInChain = 0,
-      .label = "vertex buffer",
-      .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex,
-      .size = model.vertexCount * sizeof(Vertex),
-      .mappedAtCreation = false,
-    };
-    result->buffers.vertex =
-      wgpuDeviceCreateBuffer(result->device, &vertexBufferDescriptor);
+    buffers_attach(result, result->vertexCount);
     wgpuQueueWriteBuffer(
       result->queue,
       result->buffers.vertex,
       0,
       model.vertices,
-      vertexBufferDescriptor.size);
+      result->vertexCount * sizeof(Model_Vertex));
     Model_unload(&model);
-
-    WGPUBufferDescriptor uniformBufferDescriptor = {
-      .nextInChain = 0,
-      .label = "uniformBuffer",
-      .size = sizeof(Uniforms),
-      .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform,
-      .mappedAtCreation = false
-    };
-    result->buffers.uniform =
-      wgpuDeviceCreateBuffer(result->device, &uniformBufferDescriptor);
-    WGPUSamplerDescriptor samplerDescriptor = {
-      .addressModeU = WGPUAddressMode_ClampToEdge,
-      .addressModeV = WGPUAddressMode_ClampToEdge,
-      .addressModeW = WGPUAddressMode_ClampToEdge,
-      .magFilter = WGPUFilterMode_Linear,
-      .minFilter = WGPUFilterMode_Linear,
-      .mipmapFilter = WGPUMipmapFilterMode_Linear,
-      .lodMinClamp = 0.0f,
-      .lodMaxClamp = 1.0f,
-      .compare = WGPUCompareFunction_Undefined,
-      .maxAnisotropy = 1,
-    };
-    result->texture.sampler = wgpuDeviceCreateSampler(result->device, &samplerDescriptor);
-    // depth
-    result->depth.format = WGPUTextureFormat_Depth24Plus;
-    WGPUTextureDescriptor depthTextureDescriptor = {
-      .dimension = WGPUTextureDimension_2D,
-      .format = result->depth.format,
-      .mipLevelCount = 1,
-      .sampleCount = 1,
-      .size = {640, 480, 1},
-      .usage = WGPUTextureUsage_RenderAttachment,
-      .viewFormatCount = 1,
-      .viewFormats = &result->depth.format,
-    };
-    result->depth.texture =
-      wgpuDeviceCreateTexture(result->device, &depthTextureDescriptor);
-    WGPUTextureViewDescriptor depthTextureViewDescriptor = {
-      .aspect = WGPUTextureAspect_DepthOnly,
-      .baseArrayLayer = 0,
-      .arrayLayerCount = 1,
-      .baseMipLevel = 0,
-      .mipLevelCount = 1,
-      .dimension = WGPUTextureViewDimension_2D,
-      .format = result->depth.format,
-    };
-    result->depth.view =
-      wgpuTextureCreateView(result->depth.texture, &depthTextureViewDescriptor);
     // pipeline
     WGPUBlendState blendState = {
       .color.srcFactor = WGPUBlendFactor_SrcAlpha,
@@ -433,7 +314,7 @@ Application* Application_create() {
     };
     WGPUColorTargetState colorTarget = {
       .nextInChain = 0,
-      .format = swapChainDescriptor.format,
+      .format = WGPUTextureFormat_BGRA8Unorm,
       .blend = &blendState,
       .writeMask = WGPUColorWriteMask_All,
     };
@@ -491,25 +372,25 @@ Application* Application_create() {
        // normal
         .shaderLocation = 1,
        .format = WGPUVertexFormat_Float32x3,
-       .offset = offsetof(Vertex, normal),
+       .offset = offsetof(Model_Vertex, normal),
        },
       {
        // color
         .shaderLocation = 2,
        .format = WGPUVertexFormat_Float32x3,
-       .offset = offsetof(Vertex, color),
+       .offset = offsetof(Model_Vertex, color),
        },
       {
        // uv coordinates
         .shaderLocation = 3,
        .format = WGPUVertexFormat_Float32x2,
-       .offset = offsetof(Vertex, uv),
+       .offset = offsetof(Model_Vertex, uv),
        }
     };
     WGPUVertexBufferLayout bufferLayout = {
       .attributeCount = 4,
       .attributes = vertexAttributes,
-      .arrayStride = sizeof(Vertex),
+      .arrayStride = sizeof(Model_Vertex),
       .stepMode = WGPUVertexStepMode_Vertex,
     };
     WGPURenderPipelineDescriptor pipelineDesc = {
@@ -577,7 +458,7 @@ Application* Application_create() {
   }
   return result;
 }
-bool Application_shouldClose(Application* application) {
+bool Application_shouldClose(Application application[static 1]) {
   return glfwWindowShouldClose(application->window);
 }
 void Application_render(Application application[static 1]) {
@@ -606,7 +487,7 @@ void Application_render(Application application[static 1]) {
     .resolveTarget = 0,
     .loadOp = WGPULoadOp_Clear,
     .storeOp = WGPUStoreOp_Store,
-    .clearValue = (WGPUColor){0.05, 0.05, 0.05, 1.0},
+    .clearValue = {.r = 0.05, .g = 0.05, .b = 0.05, .a = 1.0},
   };
   WGPURenderPassDepthStencilAttachment depthStencilAttachment = {
     .view = application->depth.view,
@@ -635,7 +516,7 @@ void Application_render(Application application[static 1]) {
     0,
     application->buffers.vertex,
     0,
-    application->vertexCount * sizeof(Vertex));
+    application->vertexCount * sizeof(Model_Vertex));
   wgpuRenderPassEncoderSetBindGroup(renderPass, 0, application->bindGroup, 0, 0);
   wgpuRenderPassEncoderDraw(renderPass, application->vertexCount, 1, 0, 0);
   wgpuRenderPassEncoderEnd(renderPass);
@@ -652,17 +533,9 @@ void Application_render(Application application[static 1]) {
   wgpuDeviceTick(application->device);
 }
 void Application_destroy(Application* application) {
-  wgpuBufferDestroy(application->buffers.vertex);
-  wgpuBufferRelease(application->buffers.vertex);
-  wgpuBufferDestroy(application->buffers.uniform);
-  wgpuBufferRelease(application->buffers.uniform);
-  wgpuTextureDestroy(application->texture.texture);
-  wgpuTextureRelease(application->texture.texture);
-  wgpuTextureViewRelease(application->texture.view);
-  wgpuTextureDestroy(application->depth.texture);
-  wgpuTextureRelease(application->depth.texture);
-  wgpuTextureViewRelease(application->depth.view);
-  wgpuSamplerRelease(application->texture.sampler);
+  buffers_detach(application);
+  texture_detach(application);
+  depthBuffer_detach(application);
   wgpuBindGroupRelease(application->bindGroup);
   wgpuRenderPipelineRelease(application->pipeline);
   wgpuShaderModuleRelease(application->shader);

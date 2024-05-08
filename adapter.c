@@ -1,10 +1,8 @@
-#ifndef adapter_H_
-#define adapter_H_
 #include "adapter.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#include "library/webgpu.h"
+#include "./library/webgpu.h"
 
 typedef struct {
     WGPUAdapter adapter;
@@ -33,36 +31,36 @@ WGPUAdapter adapter_request(
   assert(userData.requestEnded);
   return userData.adapter;
 }
-static const char* const adapter_featureToString(WGPUFeatureName feature) {
+#define FEATURE_STRINGIFY(feature) \
+  case feature:                    \
+    return #feature
+static const char* adapter_featureToString(WGPUFeatureName feature) {
   switch (feature) {
-    case WGPUFeatureName_Undefined:
-      return "WGPUFeatureName_Undefined";
-    case WGPUFeatureName_DepthClipControl:
-      return "WGPUFeatureName_DepthClipControl";
-    case WGPUFeatureName_Depth32FloatStencil8:
-      return "WGPUFeatureName_Depth32FloatStencil8";
-    case WGPUFeatureName_TimestampQuery:
-      return "WGPUFeatureName_TimestampQuery";
-    case WGPUFeatureName_TextureCompressionBC:
-      return "WGPUFeatureName_TextureCompressionBC";
-    case WGPUFeatureName_TextureCompressionETC2:
-      return "WGPUFeatureName_TextureCompressionETC2";
-    case WGPUFeatureName_TextureCompressionASTC:
-      return "WGPUFeatureName_TextureCompressionASTC";
-    case WGPUFeatureName_IndirectFirstInstance:
-      return "WGPUFeatureName_IndirectFirstInstance";
-    case WGPUFeatureName_ShaderF16:
-      return "WGPUFeatureName_ShaderF16";
-    case WGPUFeatureName_RG11B10UfloatRenderable:
-      return "WGPUFeatureName_RG11B10UfloatRenderable";
-    case WGPUFeatureName_BGRA8UnormStorage:
-      return "WGPUFeatureName_BGRA8UnormStorage";
-    case WGPUFeatureName_Float32Filterable:
-      return "WGPUFeatureName_Float32Filterable";
-    case WGPUFeatureName_Force32:
-      return "WGPUFeatureName_Force32";
+    FEATURE_STRINGIFY(WGPUFeatureName_Undefined);
+    FEATURE_STRINGIFY(WGPUFeatureName_DepthClipControl);
+    FEATURE_STRINGIFY(WGPUFeatureName_Depth32FloatStencil8);
+    FEATURE_STRINGIFY(WGPUFeatureName_TimestampQuery);
+    FEATURE_STRINGIFY(WGPUFeatureName_PipelineStatisticsQuery);
+    FEATURE_STRINGIFY(WGPUFeatureName_TextureCompressionBC);
+    FEATURE_STRINGIFY(WGPUFeatureName_TextureCompressionETC2);
+    FEATURE_STRINGIFY(WGPUFeatureName_TextureCompressionASTC);
+    FEATURE_STRINGIFY(WGPUFeatureName_IndirectFirstInstance);
+    FEATURE_STRINGIFY(WGPUFeatureName_ShaderF16);
+    FEATURE_STRINGIFY(WGPUFeatureName_RG11B10UfloatRenderable);
+    FEATURE_STRINGIFY(WGPUFeatureName_BGRA8UnormStorage);
+    FEATURE_STRINGIFY(WGPUFeatureName_Float32Filterable);
+    FEATURE_STRINGIFY(WGPUFeatureName_DawnShaderFloat16);
+    FEATURE_STRINGIFY(WGPUFeatureName_DawnInternalUsages);
+    FEATURE_STRINGIFY(WGPUFeatureName_DawnMultiPlanarFormats);
+    FEATURE_STRINGIFY(WGPUFeatureName_DawnNative);
+    FEATURE_STRINGIFY(WGPUFeatureName_ChromiumExperimentalDp4a);
+    FEATURE_STRINGIFY(WGPUFeatureName_TimestampQueryInsidePasses);
+    FEATURE_STRINGIFY(WGPUFeatureName_ImplicitDeviceSynchronization);
+    FEATURE_STRINGIFY(WGPUFeatureName_SurfaceCapabilities);
+    FEATURE_STRINGIFY(WGPUFeatureName_TransientAttachments);
+    FEATURE_STRINGIFY(WGPUFeatureName_MSAARenderToSingleSampled);
+    FEATURE_STRINGIFY(WGPUFeatureName_Force32);
   }
-  return "Unknown feature";
 }
 void adapter_inspect(WGPUAdapter adapter) {
   size_t featureCount = wgpuAdapterEnumerateFeatures(adapter, 0);
@@ -150,4 +148,3 @@ void adapter_inspect(WGPUAdapter adapter) {
   printf("- adapterType: %u\n", properties.adapterType);
   printf("- backendType: %u\n", properties.backendType);
 }
-#endif // adapter_H_

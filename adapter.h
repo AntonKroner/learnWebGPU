@@ -1,7 +1,7 @@
 #ifndef adapter_H_
 #define adapter_H_
 
-#include "library/webgpu.h"
+#include "./library/webgpu.h"
 
 WGPUAdapter adapter_request(
   WGPUInstance instance,

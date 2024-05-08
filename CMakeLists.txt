@@ -11,20 +11,20 @@ add_executable(webgpu.exe
 	adapter.c
 	device.c
 	linearAlgebra.c
-	01basic3d/01geometry/triangle.c
-	01basic3d/01geometry/buffers.c
-	01basic3d/01geometry/vertex.c
-	01basic3d/01geometry/attributes.c
-	01basic3d/01geometry/index.c
-	01basic3d/02uniforms/first.c
-	01basic3d/02uniforms/more.c
-	01basic3d/02uniforms/dynamic.c
-	01basic3d/03meshes/simple.c
-	01basic3d/03meshes/depth.c
-	01basic3d/03meshes/transformation.c
-	01basic3d/04texturing/first.c
-	01basic3d/04texturing/mapping.c
-	01basic3d/04texturing/sampler.c
+	#01basic3d/01geometry/triangle.c
+	#01basic3d/01geometry/buffers.c
+	#01basic3d/01geometry/vertex.c
+	#01basic3d/01geometry/attributes.c
+	#01basic3d/01geometry/index.c
+	#01basic3d/02uniforms/first.c
+	#01basic3d/02uniforms/more.c
+	#01basic3d/02uniforms/dynamic.c
+	#01basic3d/03meshes/simple.c
+	#01basic3d/03meshes/depth.c
+	#01basic3d/03meshes/transformation.c
+	#01basic3d/04texturing/first.c
+	#01basic3d/04texturing/mapping.c
+	#01basic3d/04texturing/sampler.c
 )
 set_target_properties(webgpu.exe PROPERTIES
     C_STANDARD 23

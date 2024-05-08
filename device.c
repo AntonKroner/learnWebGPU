@@ -1,21 +1,44 @@
-#ifndef device_H_
-#define device_H_
-
+#include "device.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
 #include <assert.h>
 #include <tgmath.h>
-#include "library/webgpu.h"
+#include "./library/webgpu.h"
 #define STB_IMAGE_IMPLEMENTATION
-#include "library/stb_image.h"
+#include "./library/stb_image.h"
+
+#define STRINGIFY(feature) \
+  case feature:            \
+    return #feature
 
 typedef struct {
     WGPUDevice device;
     bool requestEnded;
 } DeviceData;
 
+static void limitsSet(
+  WGPURequiredLimits required[static 1],
+  WGPUSupportedLimits supported) {
+  required->limits.maxVertexAttributes = 4;
+  required->limits.maxVertexBuffers = 2;
+  required->limits.maxBufferSize = 150000 * 44; // FIXME
+  required->limits.maxVertexBufferArrayStride = 44; // FIXME
+  required->limits.minStorageBufferOffsetAlignment =
+    supported.limits.minStorageBufferOffsetAlignment;
+  required->limits.minUniformBufferOffsetAlignment =
+    supported.limits.minUniformBufferOffsetAlignment;
+  required->limits.maxInterStageShaderComponents = 8;
+  required->limits.maxBindGroups = 1;
+  required->limits.maxUniformBuffersPerShaderStage = 1;
+  required->limits.maxUniformBufferBindingSize = 16 * 4 * sizeof(float);
+  required->limits.maxTextureDimension1D = 2048;
+  required->limits.maxTextureDimension2D = 2048;
+  required->limits.maxTextureArrayLayers = 1;
+  required->limits.maxSampledTexturesPerShaderStage = 1;
+  required->limits.maxSamplersPerShaderStage = 1;
+}
 static void device_onRequest(
   WGPURequestDeviceStatus status,
   WGPUDevice device,
@@ -32,20 +55,13 @@ static void device_onRequest(
 }
 static char* errorToString(WGPUErrorType error) {
   switch (error) {
-    case WGPUErrorType_NoError:
-      return "WGPUErrorType_NoError";
-    case WGPUErrorType_Validation:
-      return "WGPUErrorType_Validation";
-    case WGPUErrorType_OutOfMemory:
-      return "WGPUErrorType_OutOfMemory";
-    case WGPUErrorType_Internal:
-      return "WGPUErrorType_Internal";
-    case WGPUErrorType_Unknown:
-      return "WGPUErrorType_Unknown";
-    case WGPUErrorType_DeviceLost:
-      return "WGPUErrorType_DeviceLost";
-    case WGPUErrorType_Force32:
-      return "WGPUErrorType_Force32";
+    STRINGIFY(WGPUErrorType_NoError);
+    STRINGIFY(WGPUErrorType_Validation);
+    STRINGIFY(WGPUErrorType_OutOfMemory);
+    STRINGIFY(WGPUErrorType_Internal);
+    STRINGIFY(WGPUErrorType_Unknown);
+    STRINGIFY(WGPUErrorType_DeviceLost);
+    STRINGIFY(WGPUErrorType_Force32);
   }
 }
 static void onDeviceError(WGPUErrorType type, const char* message, void* /* pUserData */) {
@@ -56,9 +72,24 @@ static void onDeviceError(WGPUErrorType type, const char* message, void* /* pUse
   printf("\n");
   abort();
 }
-WGPUDevice device_request(WGPUAdapter adapter, const WGPUDeviceDescriptor* descriptor) {
+WGPUDevice device_request(WGPUAdapter adapter) {
+  WGPUSupportedLimits supported = { .nextInChain = 0, .limits = { 0 } };
+  wgpuAdapterGetLimits(adapter, &supported);
+  WGPURequiredLimits required = {
+    .nextInChain = 0,
+    .limits = supported.limits,
+  };
+  limitsSet(&required, supported);
+  WGPUDeviceDescriptor descriptor = {
+    .nextInChain = 0,
+    .label = "Device 1",
+    .requiredFeaturesCount = 0,
+    .requiredFeatures = 0,
+    .requiredLimits = &required,
+    .defaultQueue = { .label = "default queueuue" }
+  };
   DeviceData userData = { .device = 0, .requestEnded = 0 };
-  wgpuAdapterRequestDevice(adapter, descriptor, device_onRequest, (void*)&userData);
+  wgpuAdapterRequestDevice(adapter, &descriptor, device_onRequest, (void*)&userData);
   assert(userData.requestEnded);
   wgpuDeviceSetUncapturedErrorCallback(userData.device, onDeviceError, 0);
   return userData.device;
@@ -88,6 +119,55 @@ static char* readFile(const char* filename) {
   }
   return result;
 }
+static void WGPUCompilationMessage_print(const WGPUCompilationMessage message) {
+  switch (message.type) {
+    case WGPUCompilationMessageType_Error:
+      perror("Error:\n");
+      break;
+    case WGPUCompilationMessageType_Warning:
+      perror("Warning:\n");
+      break;
+    case WGPUCompilationMessageType_Info:
+      perror("Info:\n");
+      break;
+    case WGPUCompilationMessageType_Force32:
+      perror("Force32:\n");
+      break;
+  }
+  if (message.message) {
+    fprintf(stderr, "%s:\n", message.message);
+  }
+  fprintf(stderr, "lineNum: %zu\n", message.lineNum);
+  fprintf(stderr, "linePos: %zu\n", message.linePos);
+  fprintf(stderr, "offset: %zu\n", message.offset);
+  fprintf(stderr, "length: %zu\n", message.length);
+  fprintf(stderr, "utf16LinePos: %zu\n", message.utf16LinePos);
+  fprintf(stderr, "utf16Offset: %zu\n", message.utf16Offset);
+  fprintf(stderr, "utf16Length: %zu\n", message.utf16Length);
+}
+static char* compilationStatusPrint(WGPUCompilationInfoRequestStatus status) {
+  switch (status) {
+    case WGPUCompilationInfoRequestStatus_Success:
+      return "Success";
+    case WGPUCompilationInfoRequestStatus_Error:
+      return "Error";
+    case WGPUCompilationInfoRequestStatus_DeviceLost:
+      return "DeviceLost";
+    case WGPUCompilationInfoRequestStatus_Unknown:
+      return "Unknown";
+    case WGPUCompilationInfoRequestStatus_Force32:
+      return "Force32";
+  }
+}
+static void compilationPrint(
+  WGPUCompilationInfoRequestStatus status,
+  struct WGPUCompilationInfo const* info,
+  void* /* userdata */) {
+  fprintf(stderr, "Shader module compilation status: %s\n", compilationStatusPrint(status));
+  for (size_t i = 0; info->messageCount > i; i++) {
+    WGPUCompilationMessage_print(info->messages[i]);
+  }
+}
 WGPUShaderModule device_ShaderModule(WGPUDevice device, const char* path) {
   char* shader = readFile(path);
   if (!shader) {
@@ -104,6 +184,7 @@ WGPUShaderModule device_ShaderModule(WGPUDevice device, const char* path) {
     .label = path,
   };
   WGPUShaderModule result = wgpuDeviceCreateShaderModule(device, &shaderDescriptor);
+  wgpuShaderModuleGetCompilationInfo(result, &compilationPrint, 0);
   free(shader);
   return result;
 }
@@ -289,5 +370,3 @@ WGPUTexture device_Texture_load(
   }
   return texture;
 }
-
-#endif // device_H_
