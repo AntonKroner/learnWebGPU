@@ -7,7 +7,7 @@
 		"LICENSE": true,
 		"CODEOWNERS": true,
 		"vcpkg": true,
-		"vcpkg_installed": true
+		"vcpkg_installed": false
 	},
 	"files.insertFinalNewline": true,
 	"editor.tabSize": 2,

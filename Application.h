@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include "./library/webgpu.h"
 #include "./library/glfw3webgpu/glfw3webgpu.h"
-#include "./library/glfw/include/GLFW/glfw3.h"
+#include "GLFW/glfw3.h"
 #include "./adapter.h"
 #include "./device.h"
 #include "./Model.h"

@@ -6,6 +6,11 @@
 #include "./Application.h"
 
 int main(int argc, char* argv[static argc + 1]) {
+  printf(
+    "glfw version: %d %d %d\n",
+    GLFW_VERSION_MAJOR,
+    GLFW_VERSION_MINOR,
+    GLFW_VERSION_REVISION);
   int result = EXIT_FAILURE;
   extern char* optarg;
   int index = 0;
