@@ -1,7 +1,7 @@
 #ifndef device_H_
 #define device_H_
 
-#include "./library/webgpu.h"
+#include "webgpu.h"
 
 WGPUDevice device_request(WGPUAdapter adapter);
 WGPUShaderModule device_ShaderModule(WGPUDevice device, const char* path);

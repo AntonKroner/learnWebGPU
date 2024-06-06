@@ -3,9 +3,9 @@
 
 #include <stdbool.h>
 #include <tgmath.h>
-#include "./library/webgpu.h"
-#include "./linearAlgebra.h"
+#include "webgpu.h"
 #include "GLFW/glfw3.h"
+#include "./linearAlgebra.h"
 
 typedef struct {
     struct {

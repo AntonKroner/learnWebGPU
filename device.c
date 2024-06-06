@@ -5,9 +5,9 @@
 #include <string.h>
 #include <assert.h>
 #include <tgmath.h>
-#include "./library/webgpu.h"
+#include "webgpu.h"
 #define STB_IMAGE_IMPLEMENTATION
-#include "./library/stb_image.h"
+#include "stb_image.h"
 
 #define STRINGIFY(feature) \
   case feature:            \

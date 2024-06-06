@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#include "./library/webgpu.h"
+#include "webgpu.h"
 
 typedef struct {
     WGPUAdapter adapter;
