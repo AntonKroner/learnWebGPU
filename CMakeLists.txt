@@ -4,6 +4,7 @@ project(
     VERSION 0.1.0
     LANGUAGES C CXX
 )
+set(CMAKE_TOOLCHAIN_FILE ./vcpkg/scripts/buildsystems/vcpkg.cmake)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_executable(webgpu.exe
@@ -11,6 +12,7 @@ add_executable(webgpu.exe
 	adapter.c
 	device.c
 	linearAlgebra.c
+	# library/imgui/cimgui.cpp
 	#01basic3d/01geometry/triangle.c
 	#01basic3d/01geometry/buffers.c
 	#01basic3d/01geometry/vertex.c
@@ -34,14 +36,14 @@ target_compile_definitions(webgpu.exe PRIVATE
     RESOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources"
 )
 
-
+include_directories("./library")
 if (NOT EMSCRIPTEN)
-add_subdirectory(library/glfw)
+include_directories("./vcpkg_installed/x64-linux/include")
 endif()
 add_subdirectory(library/glfw3webgpu)
 add_subdirectory(library/dawn)
 target_link_options(webgpu.exe PRIVATE -lstdc++)
-target_link_libraries(webgpu.exe PRIVATE stdc++ glfw webgpu glfw3webgpu)
+target_link_libraries(webgpu.exe PRIVATE stdc++ glfw webgpu glfw3webgpu)# imgui
 
 if (MSVC)
     target_compile_options(webgpu.exe PRIVATE /W4)

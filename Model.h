@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #define TINYOBJ_LOADER_C_IMPLEMENTATION
-#include "./library/tinyobj_loader_c.h"
+#include "tinyobj_loader_c.h"
 
 typedef float Model_Vec3[3];
 typedef float Model_Vec2[2];

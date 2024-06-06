@@ -3,9 +3,9 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include "./library/webgpu.h"
-#include "./library/glfw3webgpu/glfw3webgpu.h"
-#include "./library/glfw/include/GLFW/glfw3.h"
+#include "webgpu.h"
+#include "GLFW/glfw3.h"
+#include "glfw3webgpu/glfw3webgpu.h"
 #include "./adapter.h"
 #include "./device.h"
 #include "./Model.h"
