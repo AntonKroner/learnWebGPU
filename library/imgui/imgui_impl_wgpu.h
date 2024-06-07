@@ -15,7 +15,12 @@
 // - Introduction, links and more at the top of imgui.cpp
 
 #pragma once
-#include "cimgui.h" // IMGUI_IMPL_API
+#ifdef __cplusplus
+  #include "imgui.h" // IMGUI_IMPL_API
+#else
+  #include "cimgui.h" // IMGUI_IMPL_API
+#endif
+
 #ifndef IMGUI_DISABLE
 
   #include <webgpu/webgpu.h>

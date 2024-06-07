@@ -35,7 +35,7 @@
 //  2021-02-18: Change blending equation to preserve alpha in output buffer.
 //  2021-01-28: Initial version.
 
-#include "cimgui.h"
+#include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_wgpu.h"
 #include <limits.h>
