@@ -3642,12 +3642,12 @@ CIMGUI_API bool     cimgui::ImGui_ImageButtonImTextureID(ImTextureID user_textur
 
 CIMGUI_API void     cimgui::ImGui_CaptureKeyboardFromApp(bool want_capture_keyboard)
 {
-    ::ImGui::CaptureKeyboardFromApp(want_capture_keyboard);
+    // ::ImGui::CaptureKeyboardFromApp(want_capture_keyboard);
 }
 
 CIMGUI_API void     cimgui::ImGui_CaptureMouseFromApp(bool want_capture_mouse)
 {
-    ::ImGui::CaptureMouseFromApp(want_capture_mouse);
+    // ::ImGui::CaptureMouseFromApp(want_capture_mouse);
 }
 
 CIMGUI_API cimgui::ImGuiKey cimgui::ImGui_GetKeyIndex(cimgui::ImGuiKey key)

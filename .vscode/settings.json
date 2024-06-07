@@ -28,7 +28,11 @@
 		"*.h": "c"
 	},
 	"cSpell.words": [
+		"Bezier",
+		"cimgui",
 		"Framebuffer",
+		"Gamepad",
+		"GFLW",
 		"glfw",
 		"mipmap",
 		"multisample",
@@ -37,6 +41,8 @@
 		"stbi",
 		"TINYOBJ",
 		"Uncaptured",
+		"viewports",
+		"webgpu",
 		"wgpu",
 		"WGSL",
 		"Workgroups"

@@ -17,6 +17,12 @@
 #pragma once
 #ifdef __cplusplus
   #include "imgui.h" // IMGUI_IMPL_API
+  #ifndef CIMGUI_API
+    #define CIMGUI_API
+  #endif // #ifndef CIMGUI_API
+  #ifndef CIMGUI_IMPL_API
+    #define CIMGUI_IMPL_API CIMGUI_API
+  #endif // #ifndef CIMGUI_IMPL_API
 #else
   #include "cimgui.h" // IMGUI_IMPL_API
 #endif
