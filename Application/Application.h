@@ -7,6 +7,7 @@
 #include "webgpu.h"
 #include "GLFW/glfw3.h"
 #include "glfw3webgpu/glfw3webgpu.h"
+#include "cimgui/cimgui.h"
 #include "./adapter.h"
 #include "./device.h"
 #include "./BindGroupLayoutEntry.h"
@@ -15,11 +16,8 @@
 #include "./Model.h"
 #include "./Camera.h"
 #include "./Lightning.h"
+#include "./gui.h"
 #include "../linearAlgebra.h"
-
-#include "cimgui/cimgui.h"
-#include "cimgui/cimgui_impl_wgpu.h"
-#include "cimgui/cimgui_impl_glfw.h"
 
 #define WIDTH (640)
 #define HEIGHT (480)
@@ -70,69 +68,6 @@ bool Application_shouldClose(Application application[static 1]);
 void Application_render(Application application[static 1]);
 void Application_destroy(Application* application);
 
-static bool gui_attach(Application application[static 1]) {
-  // CIMGUI_CHECKVERSION();
-  ImGui_CreateContext(0);
-  ImGui_GetIO();
-  cImGui_ImplGlfw_InitForOther(application->window, true);
-  struct ImGui_ImplWGPU_InitInfo initInfo = {
-    .Device = application->device,
-    .NumFramesInFlight = 3,
-    .RenderTargetFormat = WGPUTextureFormat_BGRA8Unorm,
-    .DepthStencilFormat = application->depth.format,
-    .PipelineMultisampleState = { .count = 1,
-  .mask = UINT32_MAX,
-  .alphaToCoverageEnabled = false,}};
-  return cImGui_ImplWGPU_Init(&initInfo);
-}
-static void gui_render(
-  Application application[static 1],
-  WGPURenderPassEncoder renderPass) {
-  cImGui_ImplWGPU_NewFrame();
-  cImGui_ImplGlfw_NewFrame();
-  ImGui_NewFrame();
-  static float f = 0.0f;
-  static int counter = 0;
-  static bool show_demo_window = true;
-  static bool show_another_window = false;
-  static ImVec4 clear_color = { .x = 0.45f, .y = 0.55f, .z = 0.60f, .w = 1.00f };
-  ImGui_Begin("Hello, world!", 0, 0);
-  ImGui_Text("This is some useful text.");
-  ImGui_Checkbox("Demo Window", &show_demo_window);
-  ImGui_Checkbox("Another Window", &show_another_window);
-  ImGui_SliderFloat("float", &f, 0.0f, 1.0f);
-  ImGui_ColorEdit3("clear color", (float*)&clear_color, 0);
-  if (ImGui_Button("Button")) {
-    counter++;
-  }
-  ImGui_SameLine();
-  ImGui_Text("counter = %d", counter);
-  ImGuiIO* io = ImGui_GetIO();
-  ImGui_Text(
-    "Application average %.3f ms/frame (%.1f FPS)",
-    1000.0f / io->Framerate,
-    io->Framerate);
-  ImGui_End();
-  ImGui_Begin("Lighting", 0, 0);
-  bool update = false;
-  update =
-    ImGui_ColorEdit3("Color #0", application->lightning.uniforms.colors[0], 0) || update;
-  update = ImGui_DragFloat3("Direction #0", application->lightning.uniforms.directions[0])
-           || update;
-  update =
-    ImGui_ColorEdit3("Color #1", application->lightning.uniforms.colors[1], 0) || update;
-  update = ImGui_DragFloat3("Direction #1", application->lightning.uniforms.directions[1])
-           || update;
-  application->lightning.update = update;
-  ImGui_End();
-  ImGui_EndFrame();
-  ImGui_Render();
-  cImGui_ImplWGPU_RenderDrawData(ImGui_GetDrawData(), renderPass);
-}
-static void gui_detach(Application application[static 1]) {
-  cImGui_ImplGlfw_Shutdown();
-  cImGui_ImplWGPU_Shutdown();
-}
 static void buffers_attach(Application application[static 1], size_t vertexCount) {
   WGPUBufferDescriptor vertexBufferDescriptor = {
     .nextInChain = 0,
@@ -503,7 +438,7 @@ Application* Application_create() {
       .color = {0.0f, 1.0f, 0.4f, 1.0f},
     };
     result->uniforms = uniforms;
-    if (!gui_attach(result)) {
+    if (!Application_gui_attach(result->window, result->device, result->depth.format)) {
       printf("gui problem!!\n");
     }
     Application_Lightning_update(&result->lightning, result->queue);
@@ -546,7 +481,7 @@ void Application_render(Application application[static 1]) {
     application->vertexCount * sizeof(Model_Vertex));
   wgpuRenderPassEncoderSetBindGroup(renderPass, 0, application->bindGroup, 0, 0);
   wgpuRenderPassEncoderDraw(renderPass, application->vertexCount, 1, 0, 0);
-  gui_render(application, renderPass);
+  Application_gui_render(renderPass, &application->lightning);
   wgpuRenderPassEncoderEnd(renderPass);
   wgpuTextureViewRelease(nextTexture);
   WGPUCommandBufferDescriptor cmdBufferDescriptor = {
@@ -562,7 +497,7 @@ void Application_render(Application application[static 1]) {
 }
 void Application_destroy(Application* application) {
   Application_Lightning_destroy(application->lightning);
-  gui_detach(application);
+  Application_gui_detach();
   buffers_detach(application);
   texture_detach(application);
   depthBuffer_detach(application);
