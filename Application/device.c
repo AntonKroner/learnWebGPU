@@ -72,7 +72,7 @@ static void onDeviceError(WGPUErrorType type, const char* message, void* /* pUse
   printf("\n");
   abort();
 }
-WGPUDevice device_request(WGPUAdapter adapter) {
+WGPUDevice Application_device_request(WGPUAdapter adapter) {
   WGPUSupportedLimits supported = { .nextInChain = 0, .limits = { 0 } };
   wgpuAdapterGetLimits(adapter, &supported);
   WGPURequiredLimits required = {
@@ -168,7 +168,7 @@ static void compilationPrint(
     WGPUCompilationMessage_print(info->messages[i]);
   }
 }
-WGPUShaderModule device_ShaderModule(WGPUDevice device, const char* path) {
+WGPUShaderModule Application_device_ShaderModule(WGPUDevice device, const char* path) {
   char* shader = readFile(path);
   if (!shader) {
     fprintf(stderr, "Error opening %s: %s\n", path, strerror(errno));
@@ -188,7 +188,7 @@ WGPUShaderModule device_ShaderModule(WGPUDevice device, const char* path) {
   free(shader);
   return result;
 }
-void device_inspect(WGPUDevice device) {
+void Application_device_inspect(WGPUDevice device) {
   size_t featureCount = wgpuDeviceEnumerateFeatures(device, 0);
   WGPUFeatureName* features = calloc(featureCount, sizeof(*features));
   wgpuDeviceEnumerateFeatures(device, features);
@@ -323,7 +323,7 @@ static uint32_t bit_width(uint32_t m) {
     return w;
   }
 }
-WGPUTexture device_Texture_load(
+WGPUTexture Application_device_Texture_load(
   WGPUDevice device,
   const char* const path,
   WGPUTextureView* view) {

@@ -2,12 +2,13 @@
 	"files.exclude": {
 		".*": true,
 		"*.json": true,
-		"build": false,
+		"build": true,
+		"build-web": true,
 		"README.md": true,
 		"LICENSE": true,
 		"CODEOWNERS": true,
-		"vcpkg": false,
-		"vcpkg_installed": false
+		"vcpkg": true,
+		"vcpkg_installed": true
 	},
 	"files.insertFinalNewline": true,
 	"editor.tabSize": 2,

@@ -8,9 +8,12 @@
 #include "glfw3webgpu/glfw3webgpu.h"
 #include "./adapter.h"
 #include "./device.h"
+#include "./BindGroupLayoutEntry.h"
+#include "./DepthStencilState.h"
+#include "./RenderPass.h"
 #include "./Model.h"
-#include "./linearAlgebra.h"
 #include "./Camera.h"
+#include "../linearAlgebra.h"
 
 #include "cimgui/cimgui.h"
 #include "cimgui/cimgui_impl_wgpu.h"
@@ -100,49 +103,6 @@ static void gui_detach(Application application[static 1]) {
   cImGui_ImplWGPU_Shutdown();
 }
 
-static WGPUDepthStencilState DepthStencilState_make() {
-  WGPUStencilFaceState face = {
-    .compare = WGPUCompareFunction_Always,
-    .failOp = WGPUStencilOperation_Keep,
-    .depthFailOp = WGPUStencilOperation_Keep,
-    .passOp = WGPUStencilOperation_Keep,
-  };
-  WGPUDepthStencilState result = {
-    .nextInChain = 0,
-    .format = WGPUTextureFormat_Undefined,
-    .depthWriteEnabled = false,
-    .depthCompare = WGPUCompareFunction_Always,
-    .stencilFront = face,
-    .stencilBack = face,
-    .stencilReadMask = 0,
-    .stencilWriteMask = 0,
-    .depthBias = 0,
-    .depthBiasSlopeScale = 0,
-    .depthBiasClamp = 0,
-  };
-  return result;
-}
-static WGPUBindGroupLayoutEntry BindGroupLayoutEntry_make() {
-  WGPUBindGroupLayoutEntry result = {
-    .buffer.nextInChain = 0,
-    .buffer.type = WGPUBufferBindingType_Undefined,
-    .buffer.minBindingSize = 0,
-    .buffer.hasDynamicOffset = false,
-    .sampler.nextInChain = 0,
-    .sampler.type = WGPUSamplerBindingType_Undefined,
-    .storageTexture.nextInChain = 0,
-    .storageTexture.access = WGPUStorageTextureAccess_Undefined,
-    .storageTexture.format = WGPUTextureFormat_Undefined,
-    .storageTexture.viewDimension = WGPUTextureViewDimension_Undefined,
-    .texture.nextInChain = 0,
-    .texture.multisampled = false,
-    .texture.sampleType = WGPUTextureSampleType_Undefined,
-    .texture.viewDimension = WGPUTextureViewDimension_Undefined,
-    .binding = 0,
-    .visibility = WGPUShaderStage_Vertex | WGPUShaderStage_Fragment,
-  };
-  return result;
-}
 static void buffers_attach(Application application[static 1], size_t vertexCount) {
   WGPUBufferDescriptor vertexBufferDescriptor = {
     .nextInChain = 0,
@@ -170,7 +130,7 @@ static void buffers_detach(Application application[static 1]) {
   wgpuBufferRelease(application->buffers.uniform);
 }
 static void texture_attach(Application application[static 1]) {
-  application->texture.texture = device_Texture_load(
+  application->texture.texture = Application_device_Texture_load(
     application->device,
     RESOURCE_DIR "/texturing/fourareen/fourareen2K_albedo.jpg",
     &application->texture.view);
@@ -256,9 +216,9 @@ static void onResize(GLFWwindow* window, int width, int height) {
 static void onMouseMove(GLFWwindow* window, double x, double y) {
   Application* application = (Application*)glfwGetWindowUserPointer(window);
   if (application) {
-    Camera_move(&application->camera, (float)x, (float)y);
+    Application_Camera_move(&application->camera, (float)x, (float)y);
     application->uniforms.matrices.view =
-      Matrix4_transpose(Camera_viewGet(application->camera));
+      Matrix4_transpose(Application_Camera_viewGet(application->camera));
   }
 }
 static void onMouseButton(GLFWwindow* window, int button, int action, int /* mods*/) {
@@ -267,15 +227,15 @@ static void onMouseButton(GLFWwindow* window, int button, int action, int /* mod
     double x = 0;
     double y = 0;
     glfwGetCursorPos(window, &x, &y);
-    Camera_activate(&application->camera, button, action, (float)x, (float)y);
+    Application_Camera_activate(&application->camera, button, action, (float)x, (float)y);
   }
 }
 static void onMouseScroll(GLFWwindow* window, double x, double y) {
   Application* application = (Application*)glfwGetWindowUserPointer(window);
   if (application) {
-    Camera_zoom(&application->camera, (float)x, (float)y);
+    Application_Camera_zoom(&application->camera, (float)x, (float)y);
     application->uniforms.matrices.view =
-      Matrix4_transpose(Camera_viewGet(application->camera));
+      Matrix4_transpose(Application_Camera_viewGet(application->camera));
   }
 }
 static bool setWindowHints() {
@@ -321,8 +281,8 @@ Application* Application_create() {
       .nextInChain = 0,
       .compatibleSurface = result->surface,
     };
-    WGPUAdapter adapter = adapter_request(result->instance, &adapterOptions);
-    result->device = device_request(adapter);
+    WGPUAdapter adapter = Application_adapter_request(result->instance, &adapterOptions);
+    result->device = Application_device_request(adapter);
     wgpuAdapterRelease(adapter);
     result->queue = wgpuDeviceGetQueue(result->device);
     int width = 0;
@@ -331,8 +291,9 @@ Application* Application_create() {
     swapChain_attach(result, WIDTH, HEIGHT);
     texture_attach(result);
     depthBuffer_attach(result, WIDTH, HEIGHT);
-    result->shader =
-      device_ShaderModule(result->device, RESOURCE_DIR "/texturing/sampler.wgsl");
+    result->shader = Application_device_ShaderModule(
+      result->device,
+      RESOURCE_DIR "/texturing/sampler.wgsl");
     Model model = Model_load(RESOURCE_DIR "/texturing/fourareen/fourareen.obj");
     result->vertexCount = model.vertexCount;
     buffers_attach(result, result->vertexCount);
@@ -367,16 +328,16 @@ Application* Application_create() {
       .targetCount = 1,
       .targets = &colorTarget,
     };
-    WGPUDepthStencilState depthStencilState = DepthStencilState_make();
+    WGPUDepthStencilState depthStencilState = Application_DepthStencilState_make();
     depthStencilState.depthCompare = WGPUCompareFunction_Less;
     depthStencilState.depthWriteEnabled = true;
     depthStencilState.format = result->depth.format;
     depthStencilState.stencilReadMask = 0;
     depthStencilState.stencilWriteMask = 0;
     WGPUBindGroupLayoutEntry bindingLayouts[] = {
-      BindGroupLayoutEntry_make(),
-      BindGroupLayoutEntry_make(),
-      BindGroupLayoutEntry_make(),
+      Application_BindGroupLayoutEntry_make(),
+      Application_BindGroupLayoutEntry_make(),
+      Application_BindGroupLayoutEntry_make(),
     };
     bindingLayouts[0].buffer.type = WGPUBufferBindingType_Uniform;
     bindingLayouts[0].buffer.minBindingSize = sizeof(Uniforms);
@@ -525,34 +486,8 @@ void Application_render(Application application[static 1]) {
   };
   WGPUCommandEncoder encoder =
     wgpuDeviceCreateCommandEncoder(application->device, &commandEncoderDesc);
-  WGPURenderPassColorAttachment renderPassColorAttachment = {
-    .view = nextTexture,
-    .resolveTarget = 0,
-    .loadOp = WGPULoadOp_Clear,
-    .storeOp = WGPUStoreOp_Store,
-    .clearValue = {.r = 0.05, .g = 0.05, .b = 0.05, .a = 1.0},
-  };
-  WGPURenderPassDepthStencilAttachment depthStencilAttachment = {
-    .view = application->depth.view,
-    .depthClearValue = 1.0f,
-    .depthLoadOp = WGPULoadOp_Clear,
-    .depthStoreOp = WGPUStoreOp_Store,
-    .depthReadOnly = false,
-    .stencilClearValue = 0,
-    .stencilLoadOp = WGPULoadOp_Undefined,
-    .stencilStoreOp = WGPUStoreOp_Undefined,
-    .stencilReadOnly = true,
-  };
-  WGPURenderPassDescriptor renderPassDesc = {
-    .nextInChain = 0,
-    .colorAttachmentCount = 1,
-    .colorAttachments = &renderPassColorAttachment,
-    .depthStencilAttachment = &depthStencilAttachment,
-    .timestampWriteCount = 0,
-    .timestampWrites = 0,
-  };
   WGPURenderPassEncoder renderPass =
-    wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
+    Application_RenderPassEncoder_make(encoder, nextTexture, application->depth.view);
   wgpuRenderPassEncoderSetPipeline(renderPass, application->pipeline);
   wgpuRenderPassEncoderSetVertexBuffer(
     renderPass,

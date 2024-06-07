@@ -3,9 +3,9 @@
 
 #include "webgpu.h"
 
-WGPUAdapter adapter_request(
+WGPUAdapter Application_adapter_request(
   WGPUInstance instance,
   const WGPURequestAdapterOptions* options);
-void adapter_inspect(WGPUAdapter adapter);
+void Application_adapter_inspect(WGPUAdapter adapter);
 
 #endif // adapter_H_

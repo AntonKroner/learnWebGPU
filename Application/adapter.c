@@ -23,7 +23,7 @@ static void adapter_onRequest(
   }
   userData->requestEnded = true;
 }
-WGPUAdapter adapter_request(
+WGPUAdapter Application_adapter_request(
   WGPUInstance instance,
   const WGPURequestAdapterOptions* options) {
   UserData userData = { .adapter = 0, .requestEnded = false };
@@ -62,7 +62,7 @@ static const char* adapter_featureToString(WGPUFeatureName feature) {
     FEATURE_STRINGIFY(WGPUFeatureName_Force32);
   }
 }
-void adapter_inspect(WGPUAdapter adapter) {
+void Application_adapter_inspect(WGPUAdapter adapter) {
   size_t featureCount = wgpuAdapterEnumerateFeatures(adapter, 0);
   WGPUFeatureName* features = calloc(featureCount, sizeof(*features));
   wgpuAdapterEnumerateFeatures(adapter, features);

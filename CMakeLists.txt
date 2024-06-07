@@ -9,8 +9,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_executable(webgpu.exe
 	main.c
-	adapter.c
-	device.c
+	Application/adapter.c
+	Application/device.c
 	linearAlgebra.c
 )
 set_target_properties(webgpu.exe PROPERTIES
