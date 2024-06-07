@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include "webgpu.h"
 #include "GLFW/glfw3.h"
 #include "glfw3webgpu/glfw3webgpu.h"
@@ -13,6 +14,7 @@
 #include "./RenderPass.h"
 #include "./Model.h"
 #include "./Camera.h"
+#include "./Lightning.h"
 #include "../linearAlgebra.h"
 
 #include "cimgui/cimgui.h"
@@ -60,6 +62,7 @@ typedef struct {
     WGPUBindGroup bindGroup;
     Uniforms uniforms;
     Camera camera;
+    Application_Lighting lightning;
 } Application;
 
 Application* Application_create();
@@ -88,11 +91,39 @@ static void gui_render(
   cImGui_ImplWGPU_NewFrame();
   cImGui_ImplGlfw_NewFrame();
   ImGui_NewFrame();
+  static float f = 0.0f;
+  static int counter = 0;
+  static bool show_demo_window = true;
+  static bool show_another_window = false;
+  static ImVec4 clear_color = { .x = 0.45f, .y = 0.55f, .z = 0.60f, .w = 1.00f };
   ImGui_Begin("Hello, world!", 0, 0);
   ImGui_Text("This is some useful text.");
-  if (ImGui_Button("Click me")) {
-    // do something
+  ImGui_Checkbox("Demo Window", &show_demo_window);
+  ImGui_Checkbox("Another Window", &show_another_window);
+  ImGui_SliderFloat("float", &f, 0.0f, 1.0f);
+  ImGui_ColorEdit3("clear color", (float*)&clear_color, 0);
+  if (ImGui_Button("Button")) {
+    counter++;
   }
+  ImGui_SameLine();
+  ImGui_Text("counter = %d", counter);
+  ImGuiIO* io = ImGui_GetIO();
+  ImGui_Text(
+    "Application average %.3f ms/frame (%.1f FPS)",
+    1000.0f / io->Framerate,
+    io->Framerate);
+  ImGui_End();
+  ImGui_Begin("Lighting", 0, 0);
+  bool update = false;
+  update =
+    ImGui_ColorEdit3("Color #0", application->lightning.uniforms.colors[0], 0) || update;
+  update = ImGui_DragFloat3("Direction #0", application->lightning.uniforms.directions[0])
+           || update;
+  update =
+    ImGui_ColorEdit3("Color #1", application->lightning.uniforms.colors[1], 0) || update;
+  update = ImGui_DragFloat3("Direction #1", application->lightning.uniforms.directions[1])
+           || update;
+  application->lightning.update = update;
   ImGui_End();
   ImGui_EndFrame();
   ImGui_Render();
@@ -102,7 +133,6 @@ static void gui_detach(Application application[static 1]) {
   cImGui_ImplGlfw_Shutdown();
   cImGui_ImplWGPU_Shutdown();
 }
-
 static void buffers_attach(Application application[static 1], size_t vertexCount) {
   WGPUBufferDescriptor vertexBufferDescriptor = {
     .nextInChain = 0,
@@ -132,7 +162,7 @@ static void buffers_detach(Application application[static 1]) {
 static void texture_attach(Application application[static 1]) {
   application->texture.texture = Application_device_Texture_load(
     application->device,
-    RESOURCE_DIR "/texturing/fourareen/fourareen2K_albedo.jpg",
+    RESOURCE_DIR "/fourareen/fourareen2K_albedo.jpg",
     &application->texture.view);
   WGPUSamplerDescriptor samplerDescriptor = {
     .addressModeU = WGPUAddressMode_ClampToEdge,
@@ -222,6 +252,10 @@ static void onMouseMove(GLFWwindow* window, double x, double y) {
   }
 }
 static void onMouseButton(GLFWwindow* window, int button, int action, int /* mods*/) {
+  ImGuiIO* io = ImGui_GetIO();
+  if (io->WantCaptureMouse) {
+    return;
+  }
   Application* application = (Application*)glfwGetWindowUserPointer(window);
   if (application) {
     double x = 0;
@@ -293,8 +327,8 @@ Application* Application_create() {
     depthBuffer_attach(result, WIDTH, HEIGHT);
     result->shader = Application_device_ShaderModule(
       result->device,
-      RESOURCE_DIR "/texturing/sampler.wgsl");
-    Model model = Model_load(RESOURCE_DIR "/texturing/fourareen/fourareen.obj");
+      RESOURCE_DIR "/lightning/control.wgsl");
+    Model model = Model_load(RESOURCE_DIR "/fourareen/fourareen.obj");
     result->vertexCount = model.vertexCount;
     buffers_attach(result, result->vertexCount);
     wgpuQueueWriteBuffer(
@@ -304,6 +338,7 @@ Application* Application_create() {
       model.vertices,
       result->vertexCount * sizeof(Model_Vertex));
     Model_unload(&model);
+    result->lightning = Application_Lightning_create(result->device);
     // pipeline
     WGPUBlendState blendState = {
       .color.srcFactor = WGPUBlendFactor_SrcAlpha,
@@ -338,6 +373,7 @@ Application* Application_create() {
       Application_BindGroupLayoutEntry_make(),
       Application_BindGroupLayoutEntry_make(),
       Application_BindGroupLayoutEntry_make(),
+      Application_BindGroupLayoutEntry_make(),
     };
     bindingLayouts[0].buffer.type = WGPUBufferBindingType_Uniform;
     bindingLayouts[0].buffer.minBindingSize = sizeof(Uniforms);
@@ -348,9 +384,13 @@ Application* Application_create() {
     bindingLayouts[2].binding = 2;
     bindingLayouts[2].visibility = WGPUShaderStage_Fragment;
     bindingLayouts[2].sampler.type = WGPUSamplerBindingType_Filtering;
+    bindingLayouts[3].binding = 3;
+    bindingLayouts[3].visibility = WGPUShaderStage_Fragment;
+    bindingLayouts[3].buffer.type = WGPUBufferBindingType_Uniform;
+    bindingLayouts[3].buffer.minBindingSize = sizeof(Application_Lighting_Uniforms);
     WGPUBindGroupLayoutDescriptor bindGroupLayoutDescriptor = {
       .nextInChain = 0,
-      .entryCount = 3,
+      .entryCount = 4,
       .entries = bindingLayouts,
     };
     WGPUBindGroupLayout bindGroupLayout =
@@ -432,6 +472,13 @@ Application* Application_create() {
        .nextInChain = 0,
        .binding = 2,
        .sampler = result->texture.sampler,
+       },
+      {
+       .nextInChain = 0,
+       .binding = 3,
+       .buffer = result->lightning.buffer,
+       .offset = 0,
+       .size = sizeof(Application_Lighting_Uniforms),
        }
     };
     WGPUBindGroupDescriptor bindGroupDescriptor = {
@@ -459,6 +506,7 @@ Application* Application_create() {
     if (!gui_attach(result)) {
       printf("gui problem!!\n");
     }
+    Application_Lightning_update(&result->lightning, result->queue);
   }
   return result;
 }
@@ -467,6 +515,7 @@ bool Application_shouldClose(Application application[static 1]) {
 }
 void Application_render(Application application[static 1]) {
   glfwPollEvents();
+  Application_Lightning_update(&application->lightning, application->queue);
   WGPUTextureView nextTexture =
     wgpuSwapChainGetCurrentTextureView(application->swapChain);
   if (!nextTexture) {
@@ -512,6 +561,7 @@ void Application_render(Application application[static 1]) {
   wgpuDeviceTick(application->device);
 }
 void Application_destroy(Application* application) {
+  Application_Lightning_destroy(application->lightning);
   gui_detach(application);
   buffers_detach(application);
   texture_detach(application);

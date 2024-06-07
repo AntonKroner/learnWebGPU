@@ -4,7 +4,6 @@
   #include "imgui_impl_wgpu.h"
   #include <webgpu/webgpu.h>
 
-// Wrap this in a namespace to keep it separate from the C++ API
 namespace cimgui {
   #include "cimgui_impl_wgpu.h"
 } // namespace cimgui
