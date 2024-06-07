@@ -6,7 +6,7 @@
 		"README.md": true,
 		"LICENSE": true,
 		"CODEOWNERS": true,
-		"vcpkg": true,
+		"vcpkg": false,
 		"vcpkg_installed": false
 	},
 	"files.insertFinalNewline": true,
@@ -28,7 +28,12 @@
 		"*.h": "c"
 	},
 	"cSpell.words": [
+		"Bezier",
+		"CHECKVERSION",
+		"cimgui",
 		"Framebuffer",
+		"Gamepad",
+		"GFLW",
 		"glfw",
 		"mipmap",
 		"multisample",
@@ -37,6 +42,8 @@
 		"stbi",
 		"TINYOBJ",
 		"Uncaptured",
+		"viewports",
+		"webgpu",
 		"wgpu",
 		"WGSL",
 		"Workgroups"

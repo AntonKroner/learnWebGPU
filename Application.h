@@ -12,6 +12,10 @@
 #include "./linearAlgebra.h"
 #include "./Camera.h"
 
+#include "cimgui/cimgui.h"
+#include "cimgui/cimgui_impl_wgpu.h"
+#include "cimgui/cimgui_impl_glfw.h"
+
 #define WIDTH (640)
 #define HEIGHT (480)
 
@@ -59,6 +63,42 @@ Application* Application_create();
 bool Application_shouldClose(Application application[static 1]);
 void Application_render(Application application[static 1]);
 void Application_destroy(Application* application);
+
+static bool gui_attach(Application application[static 1]) {
+  // CIMGUI_CHECKVERSION();
+  ImGui_CreateContext(0);
+  ImGui_GetIO();
+  cImGui_ImplGlfw_InitForOther(application->window, true);
+  struct ImGui_ImplWGPU_InitInfo initInfo = {
+    .Device = application->device,
+    .NumFramesInFlight = 3,
+    .RenderTargetFormat = WGPUTextureFormat_BGRA8Unorm,
+    .DepthStencilFormat = application->depth.format,
+    .PipelineMultisampleState = { .count = 1,
+  .mask = UINT32_MAX,
+  .alphaToCoverageEnabled = false,}};
+  return cImGui_ImplWGPU_Init(&initInfo);
+}
+static void gui_render(
+  Application application[static 1],
+  WGPURenderPassEncoder renderPass) {
+  cImGui_ImplWGPU_NewFrame();
+  cImGui_ImplGlfw_NewFrame();
+  ImGui_NewFrame();
+  ImGui_Begin("Hello, world!", 0, 0);
+  ImGui_Text("This is some useful text.");
+  if (ImGui_Button("Click me")) {
+    // do something
+  }
+  ImGui_End();
+  ImGui_EndFrame();
+  ImGui_Render();
+  cImGui_ImplWGPU_RenderDrawData(ImGui_GetDrawData(), renderPass);
+}
+static void gui_detach(Application application[static 1]) {
+  cImGui_ImplGlfw_Shutdown();
+  cImGui_ImplWGPU_Shutdown();
+}
 
 static WGPUDepthStencilState DepthStencilState_make() {
   WGPUStencilFaceState face = {
@@ -455,6 +495,9 @@ Application* Application_create() {
       .color = {0.0f, 1.0f, 0.4f, 1.0f},
     };
     result->uniforms = uniforms;
+    if (!gui_attach(result)) {
+      printf("gui problem!!\n");
+    }
   }
   return result;
 }
@@ -519,6 +562,7 @@ void Application_render(Application application[static 1]) {
     application->vertexCount * sizeof(Model_Vertex));
   wgpuRenderPassEncoderSetBindGroup(renderPass, 0, application->bindGroup, 0, 0);
   wgpuRenderPassEncoderDraw(renderPass, application->vertexCount, 1, 0, 0);
+  gui_render(application, renderPass);
   wgpuRenderPassEncoderEnd(renderPass);
   wgpuTextureViewRelease(nextTexture);
   WGPUCommandBufferDescriptor cmdBufferDescriptor = {
@@ -533,6 +577,7 @@ void Application_render(Application application[static 1]) {
   wgpuDeviceTick(application->device);
 }
 void Application_destroy(Application* application) {
+  gui_detach(application);
   buffers_detach(application);
   texture_detach(application);
   depthBuffer_detach(application);

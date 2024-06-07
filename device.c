@@ -337,8 +337,8 @@ WGPUTexture device_Texture_load(
   WGPUTextureDescriptor textureDescriptor = {
     .nextInChain = 0,
     .dimension = WGPUTextureDimension_2D,
-    .format =
-      WGPUTextureFormat_RGBA8Unorm, // by convention for bmp, png and jpg file. Be careful with other formats,
+ // by convention for bmp, png and jpg file. Be careful with other formats,
+    .format = WGPUTextureFormat_RGBA8Unorm,
     .mipLevelCount =
       bit_width(fmax(textureDescriptor.size.width, textureDescriptor.size.height)),
     .sampleCount = 1,
@@ -365,7 +365,6 @@ WGPUTexture device_Texture_load(
       .dimension = WGPUTextureViewDimension_2D,
       .format = textureDescriptor.format,
     };
-    printf("texture view");
     *view = wgpuTextureCreateView(texture, &viewDescriptor);
   }
   return texture;

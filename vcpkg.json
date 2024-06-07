@@ -5,6 +5,12 @@
 	"dependencies": [
 		{
 			"name": "glfw3"
+		},
+		{
+			"name": "imgui",
+			"features": [
+				"glfw-binding"
+			]
 		}
 	]
 }

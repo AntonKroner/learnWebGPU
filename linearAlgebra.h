@@ -11,6 +11,9 @@ typedef struct {
     float components[3];
 } Vector3;
 
+#define Vector_add(a, b) \
+  _Generic((a), Vector3: Vector3_add, Vector4: Vector4_add)((a), (b))
+
 Matrix4 Matrix4_fill(float value);
 Matrix4 Matrix4_diagonal(float value);
 Matrix4 Matrix4_transpose(Matrix4 matrix);
