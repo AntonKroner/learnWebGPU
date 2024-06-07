@@ -12,9 +12,9 @@ add_executable(webgpu.exe
 	adapter.c
 	device.c
 	linearAlgebra.c
-	# library/imgui/cimgui.cpp
-	# library/imgui/cimgui_impl_glfw.cpp
-	# library/imgui/imgui_impl_wgpu.cpp
+	# library/cimgui/imgui_impl_wgpu.cpp
+	# library/cimgui/cimgui.cpp
+	# library/cimgui/cimgui_impl_glfw.cpp
 	#01basic3d/01geometry/triangle.c
 	#01basic3d/01geometry/buffers.c
 	#01basic3d/01geometry/vertex.c
@@ -37,16 +37,17 @@ set_target_properties(webgpu.exe PROPERTIES
 target_compile_definitions(webgpu.exe PRIVATE
     RESOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources"
 )
-set(imgui_DIR ./vcpkg_installed/x64-linux/share/imgui)
-find_package(imgui CONFIG REQUIRED)
+# set(imgui_DIR ./vcpkg_installed/x64-linux/share/imgui)
+# find_package(imgui CONFIG REQUIRED)
 include_directories("./library")
 if (NOT EMSCRIPTEN)
 include_directories("./vcpkg_installed/x64-linux/include")
 endif()
 add_subdirectory(library/glfw3webgpu)
 add_subdirectory(library/dawn)
+add_subdirectory(library/cimgui)
 target_link_options(webgpu.exe PRIVATE -lstdc++)
-target_link_libraries(webgpu.exe PRIVATE stdc++ glfw webgpu glfw3webgpu imgui::imgui)
+target_link_libraries(webgpu.exe PRIVATE stdc++ glfw webgpu glfw3webgpu cimgui)
 
 if (MSVC)
     target_compile_options(webgpu.exe PRIVATE /W4)

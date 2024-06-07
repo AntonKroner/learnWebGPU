@@ -15,18 +15,7 @@
 // - Introduction, links and more at the top of imgui.cpp
 
 #pragma once
-#ifdef __cplusplus
-  #include "imgui.h" // IMGUI_IMPL_API
-  #ifndef CIMGUI_API
-    #define CIMGUI_API
-  #endif // #ifndef CIMGUI_API
-  #ifndef CIMGUI_IMPL_API
-    #define CIMGUI_IMPL_API CIMGUI_API
-  #endif // #ifndef CIMGUI_IMPL_API
-#else
-  #include "cimgui.h" // IMGUI_IMPL_API
-#endif
-
+#include "imgui.h" // IMGUI_IMPL_API
 #ifndef IMGUI_DISABLE
 
   #include <webgpu/webgpu.h>
@@ -34,21 +23,27 @@
 // Initialization data, for ImGui_ImplWGPU_Init()
 struct ImGui_ImplWGPU_InitInfo {
     WGPUDevice Device;
-    int NumFramesInFlight;
-    WGPUTextureFormat RenderTargetFormat;
-    WGPUTextureFormat DepthStencilFormat;
-    WGPUMultisampleState PipelineMultisampleState;
+    int NumFramesInFlight = 3;
+    WGPUTextureFormat RenderTargetFormat = WGPUTextureFormat_Undefined;
+    WGPUTextureFormat DepthStencilFormat = WGPUTextureFormat_Undefined;
+    WGPUMultisampleState PipelineMultisampleState = {};
+
+    ImGui_ImplWGPU_InitInfo() {
+      PipelineMultisampleState.count = 1;
+      PipelineMultisampleState.mask = UINT32_MAX;
+      PipelineMultisampleState.alphaToCoverageEnabled = false;
+    }
 };
 
-CIMGUI_IMPL_API bool ImGui_ImplWGPU_Init(struct ImGui_ImplWGPU_InitInfo* init_info);
-CIMGUI_IMPL_API void ImGui_ImplWGPU_Shutdown();
-CIMGUI_IMPL_API void ImGui_ImplWGPU_NewFrame();
-CIMGUI_IMPL_API void ImGui_ImplWGPU_RenderDrawData(
+IMGUI_IMPL_API bool ImGui_ImplWGPU_Init(ImGui_ImplWGPU_InitInfo* init_info);
+IMGUI_IMPL_API void ImGui_ImplWGPU_Shutdown();
+IMGUI_IMPL_API void ImGui_ImplWGPU_NewFrame();
+IMGUI_IMPL_API void ImGui_ImplWGPU_RenderDrawData(
   ImDrawData* draw_data,
   WGPURenderPassEncoder pass_encoder);
 
 // Use if you want to reset your rendering device without losing Dear ImGui state.
-CIMGUI_IMPL_API void ImGui_ImplWGPU_InvalidateDeviceObjects();
-CIMGUI_IMPL_API bool ImGui_ImplWGPU_CreateDeviceObjects();
+IMGUI_IMPL_API void ImGui_ImplWGPU_InvalidateDeviceObjects();
+IMGUI_IMPL_API bool ImGui_ImplWGPU_CreateDeviceObjects();
 
 #endif // #ifndef IMGUI_DISABLE

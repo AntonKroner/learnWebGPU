@@ -1,32 +1,15 @@
-#add_library(cimgui STATIC cimgui.c)
-#target_include_directories(cimgui PUBLIC .)
-#target_link_libraries(cimgui PUBLIC glfw webgpu)
-
-# Define an ImGui target that fits our use case
-add_library(imgui STATIC
-    # Among the different backends available, we are interested in connecting
-    # the GUI to GLFW andWebGPU:
-    backends/imgui_impl_wgpu.h
-    backends/imgui_impl_wgpu.cpp
-    backends/imgui_impl_glfw.h
-    backends/imgui_impl_glfw.cpp
-
-    # Bonus to add some C++ specific features (the core ImGUi is a C library)
-    misc/cpp/imgui_stdlib.h
-    misc/cpp/imgui_stdlib.cpp
-
-    # The core ImGui files
-    imconfig.h
-    imgui.h
-    imgui.cpp
-    imgui_draw.cpp
-    imgui_internal.h
-    imgui_tables.cpp
-    imgui_widgets.cpp
-    imstb_rectpack.h
-    imstb_textedit.h
-    imstb_truetype.h
+add_library(cimgui STATIC
+		imgui_impl_wgpu.h
+		imgui_impl_wgpu.cpp
+    cimgui.h
+    cimgui.cpp
+		cimgui_impl_glfw.h
+		cimgui_impl_glfw.cpp
+		cimgui_impl_wgpu.h
+    cimgui_impl_wgpu.cpp
 )
+set(imgui_DIR ../../vcpkg_installed/x64-linux/share/imgui)
+find_package(imgui CONFIG REQUIRED)
 
-target_include_directories(imgui PUBLIC .)
-target_link_libraries(imgui PUBLIC webgpu glfw)
+target_include_directories(cimgui PUBLIC .)
+target_link_libraries(cimgui PUBLIC webgpu glfw imgui::imgui)
