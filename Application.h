@@ -12,6 +12,10 @@
 #include "./linearAlgebra.h"
 #include "./Camera.h"
 
+#include "imgui/cimgui.h"
+#include "imgui/imgui_impl_wgpu.h"
+#include "imgui/cimgui_impl_glfw.h"
+
 #define WIDTH (640)
 #define HEIGHT (480)
 
@@ -59,6 +63,29 @@ Application* Application_create();
 bool Application_shouldClose(Application application[static 1]);
 void Application_render(Application application[static 1]);
 void Application_destroy(Application* application);
+
+static bool gui_attach(Application application[static 1]) {
+  CIMGUI_CHECKVERSION();
+  ImGui_CreateContext(0);
+  ImGui_GetIO();
+
+  // Setup Platform/Renderer backends
+  cImGui_ImplGlfw_InitForOther(application->window, true);
+  struct ImGui_ImplWGPU_InitInfo initInfo = {
+    .Device = application->device,
+    .NumFramesInFlight = 3,
+    .RenderTargetFormat = WGPUTextureFormat_BGRA8Unorm,
+    .DepthStencilFormat = application->depth.format,
+    .PipelineMultisampleState = { .count = 1,
+  .mask = UINT32_MAX,
+  .alphaToCoverageEnabled = false,}};
+  ImGui_ImplWGPU_Init(&initInfo);
+  return true;
+}
+static void gui_render(Application application[static 1]) {
+}
+static void gui_detach(Application application[static 1]) {
+}
 
 static WGPUDepthStencilState DepthStencilState_make() {
   WGPUStencilFaceState face = {

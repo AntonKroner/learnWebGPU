@@ -6,7 +6,7 @@
 		"README.md": true,
 		"LICENSE": true,
 		"CODEOWNERS": true,
-		"vcpkg": true,
+		"vcpkg": false,
 		"vcpkg_installed": false
 	},
 	"files.insertFinalNewline": true,
