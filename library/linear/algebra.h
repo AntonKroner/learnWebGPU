@@ -1,6 +1,7 @@
-#ifndef linearAlgebra_H_
-#define linearAlgebra_H_
+#ifndef linear_algebra_H_
+#define linear_algebra_H_
 
+#include <stddef.h>
 typedef struct {
     double elements[16];
 } Matrix4;
@@ -34,11 +35,37 @@ typedef struct {
 typedef struct {
     float components[2];
 } Vector2f;
+typedef struct {
+    double* restrict components;
+    size_t length;
+} Vector;
+typedef struct {
+    double* restrict elements;
+    size_t rows;
+    size_t columns;
+} Matrix;
 
-// typedef struct {
-//     float* components;
-// } Vector;
-// Vector Vector_add(Vector a, Vector b);
+Matrix* Matrix_create(size_t rows, size_t columns);
+void Matrix_destroy(Matrix* matrix);
+void Matrix_fill(Matrix matrix[static 1], double value);
+void Matrix_setDiagonal(Matrix matrix[static 1], double value);
+void Matrix_add(Matrix a[static 1], Matrix b[static 1], Matrix result[static 1]);
+void Matrix_multiply(Matrix a[static 1], Matrix b[static 1], Matrix result[static 1]);
+void Matrix_differentiate(Matrix result[static 1]);
+void Matrix_print(Matrix matrix[static 1]);
+
+Vector* Vector_create(size_t length);
+void Vector_destroy(Vector* vector);
+void Vector_set(Vector vector[static 1], double values[static vector->length]);
+Vector* Vector_from(size_t length, double values[static length]);
+void(Vector_scale)(double scalar, Vector vector[static 1]);
+void(Vector_fill)(Vector* vector, double value);
+void(Vector_add)(Vector a[static 1], Vector b[static 1], Vector result[static 1]);
+void(Vector_subtract)(Vector a[static 1], Vector b[static 1], Vector* result);
+double(Vector_inner)(Vector a[static 1], Vector b[static 1]);
+void Vector_differentiate(Vector input[static 1], Vector result[static 1]);
+void(Vector_transform)(Matrix matrix[static 1], Vector v[static 1], Vector* result);
+void(Vector_print)(Vector vector[static 1]);
 
 #define Vector_add(a, b)    \
   _Generic(                 \
@@ -66,7 +93,18 @@ typedef struct {
     Vector4: Vector4_inner,   \
     Vector2f: Vector2f_inner, \
     Vector3f: Vector3f_inner, \
-    Vector4f: Vector4f_inner)((a), (b))
+    Vector4f: Vector4f_inner, \
+    Vector *: Vector_inner)((a), (b))
+#define Vector_norm(a)       \
+  _Generic(                  \
+    (a),                     \
+    Vector2: Vector2_norm,   \
+    Vector3: Vector3_norm,   \
+    Vector4: Vector4_norm,   \
+    Vector2f: Vector2f_norm, \
+    Vector3f: Vector3f_norm, \
+    Vector4f: Vector4f_norm, \
+    Vector *: Vector_norm)(a)
 #define Vector_transform(a, b)    \
   _Generic(                       \
     (b),                          \
@@ -93,7 +131,8 @@ typedef struct {
     Vector4: Vector4_print,   \
     Vector2f: Vector2f_print, \
     Vector3f: Vector3f_print, \
-    Vector4f: Vector4f_print)(a)
+    Vector4f: Vector4f_print, \
+    Vector *: Vector_print)(a)
 #define Vector_cross(a, b) \
   _Generic((a), Vector3: Vector3_cross, Vector3f: Vector3f_cross)(a, b)
 
@@ -186,7 +225,7 @@ Vector2 Vector2_fill(double value);
 Vector2 Vector2_scale(double scalar, Vector2 vector);
 Vector2 Vector2_add(Vector2 a, Vector2 b);
 Vector2 Vector2_normalize(Vector2 v);
-Vector2 Vector2_transform(Matrix3 matrix, Vector2 v);
+// Vector2 Vector2_transform(Matrix2 matrix, Vector2 v);
 void Vector2_print(Vector2 vector);
 // Vector2f
 Vector2f Vector2f_make(float x, float y);
@@ -195,7 +234,7 @@ Vector2f Vector2f_fill(float value);
 Vector2f Vector2f_scale(float scalar, Vector2f vector);
 Vector2f Vector2f_add(Vector2f a, Vector2f b);
 Vector2f Vector2f_normalize(Vector2f v);
-Vector2 Vector2_transform(Matrix3 matrix, Vector2 v);
+// Vector2f Vector2_transform(Matrix2f matrix, Vector2f v);
 void Vector2f_print(Vector2f vector);
 
-#endif // linearAlgebra_H_
+#endif // linear_algebra_H_

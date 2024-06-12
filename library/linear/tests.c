@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "linearAlgebra.h"
+#include "algebra.h"
 
 int main() {
   const Vector2 r22 = Vector2_make(1.2, 5.3);

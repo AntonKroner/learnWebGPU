@@ -1,4 +1,4 @@
-#include "linearAlgebra.h"
+#include "algebra.h"
 #include <stdio.h>
 #include <tgmath.h>
 
@@ -116,6 +116,13 @@ Vector4f Vector4f_make(float x, float y, float z, float w) {
     }                                                        \
     return result;                                           \
   }
+#define VectorN_norm(N)                                \
+  double Vector##N##_norm(Vector##N vector) {          \
+    return sqrt((Vector##N##_inner)(vector, vector));  \
+  }                                                    \
+  float Vector##N##f_norm(Vector##N##f vector) {       \
+    return sqrt((Vector##N##f_inner)(vector, vector)); \
+  }
 #define VectorN_transform(N)                                                  \
   Vector##N Vector##N##_transform(Matrix##N matrix, Vector##N v) {            \
     Vector##N result = { 0 };                                                 \
@@ -150,22 +157,22 @@ Vector4f Vector4f_make(float x, float y, float z, float w) {
     }                                            \
     printf(" ]\n");                              \
   }
-#define VectorN_normalize(N)                             \
-  Vector##N Vector##N##_normalize(Vector##N v) {         \
-    const float length = sqrt(Vector##N##_inner(v, v));  \
-    Vector##N result = { .components = { 0 } };          \
-    for (size_t n = 0; N > n; n++) {                     \
-      result.components[n] = v.components[n] / length;   \
-    }                                                    \
-    return result;                                       \
-  }                                                      \
-  Vector##N##f Vector##N##f_normalize(Vector##N##f v) {  \
-    const float length = sqrt(Vector##N##f_inner(v, v)); \
-    Vector##N##f result = { .components = { 0 } };       \
-    for (size_t n = 0; N > n; n++) {                     \
-      result.components[n] = v.components[n] / length;   \
-    }                                                    \
-    return result;                                       \
+#define VectorN_normalize(N)                            \
+  Vector##N Vector##N##_normalize(Vector##N v) {        \
+    const float norm = sqrt(Vector##N##_inner(v, v));   \
+    Vector##N result = { .components = { 0 } };         \
+    for (size_t n = 0; N > n; n++) {                    \
+      result.components[n] = v.components[n] / norm;    \
+    }                                                   \
+    return result;                                      \
+  }                                                     \
+  Vector##N##f Vector##N##f_normalize(Vector##N##f v) { \
+    const float norm = sqrt(Vector##N##f_inner(v, v));  \
+    Vector##N##f result = { .components = { 0 } };      \
+    for (size_t n = 0; N > n; n++) {                    \
+      result.components[n] = v.components[n] / norm;    \
+    }                                                   \
+    return result;                                      \
   }
 Vector3 Vector3_cross(Vector3 v, Vector3 w) {
   Vector3 result = { 0 };
@@ -190,13 +197,14 @@ Vector3f Vector3f_cross(Vector3f v, Vector3f w) {
 VectorN_fill(2) VectorN_fill(3) VectorN_fill(4) VectorN_from(2) VectorN_from(3)
   VectorN_from(4) VectorN_scale(2) VectorN_scale(3) VectorN_scale(4) VectorN_add(2)
     VectorN_add(3) VectorN_add(4) VectorN_inner(2) VectorN_inner(3) VectorN_inner(4)
-      VectorN_transform(3) VectorN_transform(4) VectorN_print(2) VectorN_print(3)
-        VectorN_print(4) VectorN_normalize(2) VectorN_normalize(3) VectorN_normalize(4)
+      VectorN_norm(2) VectorN_norm(3) VectorN_norm(4) VectorN_transform(3)
+        VectorN_transform(4) VectorN_print(2) VectorN_print(3) VectorN_print(4)
+          VectorN_normalize(2) VectorN_normalize(3) VectorN_normalize(4)
 // #define linearAlgebraUnitTests
 #ifdef linearAlgebraUnitTests
   #include <stdlib.h>
 
-          int main() {
+            int main() {
   const Vector3 r1 = Vector3_make(1, 0, 0);
   const Vector3 r2 = Vector3_make(0, 1, 0);
   const Vector3 r3 = Vector3_cross(r1, r2);
