@@ -5,14 +5,13 @@
 #include <stdio.h>
 #define TINYOBJ_LOADER_C_IMPLEMENTATION
 #include "tinyobj_loader_c.h"
+#include "./linear/algebra.h"
 
-typedef float Model_Vec3[3];
-typedef float Model_Vec2[2];
 typedef struct {
-    Model_Vec3 position;
-    Model_Vec3 normal;
-    Model_Vec3 color;
-    Model_Vec2 uv;
+    Vector3f position;
+    Vector3f normal;
+    Vector3f color;
+    Vector2f uv;
 } Model_Vertex;
 typedef struct {
     Model_Vertex* vertices;
@@ -66,33 +65,32 @@ Model Model_load(char* const file) {
     result.vertices = calloc(attributes.num_faces, sizeof(Model_Vertex));
     for (size_t i = 0; attributes.num_faces > i; i++) {
       const tinyobj_vertex_index_t face = attributes.faces[i];
-      result.vertices[i].color[0] = 1.0;
-      result.vertices[i].color[1] = 1.0;
-      result.vertices[i].color[2] = 1.0;
-      result.vertices[i].position[0] = attributes.vertices[3 * face.v_idx];
-      result.vertices[i].position[1] = -1 * attributes.vertices[3 * face.v_idx + 2];
-      result.vertices[i].position[2] = attributes.vertices[3 * face.v_idx + 1];
-      result.vertices[i].normal[0] = attributes.normals[3 * face.vn_idx];
-      result.vertices[i].normal[1] = -1 * attributes.normals[3 * face.vn_idx + 2];
-      result.vertices[i].normal[2] = attributes.normals[3 * face.vn_idx + 1];
-      result.vertices[i].uv[0] = attributes.texcoords[2 * face.vt_idx];
-      result.vertices[i].uv[1] = 1 - attributes.texcoords[2 * face.vt_idx + 1];
+      result.vertices[i].color.components[0] = 1.0;
+      result.vertices[i].color.components[1] = 1.0;
+      result.vertices[i].color.components[2] = 1.0;
+      result.vertices[i].position.components[0] = attributes.vertices[3 * face.v_idx];
+      result.vertices[i].position.components[1] =
+        -1 * attributes.vertices[3 * face.v_idx + 2];
+      result.vertices[i].position.components[2] = attributes.vertices[3 * face.v_idx + 1];
+      result.vertices[i].normal.components[0] = attributes.normals[3 * face.vn_idx];
+      result.vertices[i].normal.components[1] =
+        -1 * attributes.normals[3 * face.vn_idx + 2];
+      result.vertices[i].normal.components[2] = attributes.normals[3 * face.vn_idx + 1];
+      result.vertices[i].uv.components[0] = attributes.texcoords[2 * face.vt_idx];
+      result.vertices[i].uv.components[1] = 1 - attributes.texcoords[2 * face.vt_idx + 1];
     }
     tinyobj_attrib_free(&attributes);
     if (shapes) {
       tinyobj_shapes_free(shapes, shapesCount);
     }
     if (materials) {
-      printf("materials count: %zu\n", materialsCount);
       tinyobj_materials_free(materials, materialsCount);
     }
   }
   return result;
 }
 void Model_unload(Model* model) {
-  if (model->vertices) {
-    free(model->vertices);
-  }
+  free(model->vertices);
   model->vertexCount = 0;
 }
 

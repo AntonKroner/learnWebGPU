@@ -13,6 +13,7 @@ Vector* Vector_create(size_t length) {
 void Vector_destroy(Vector* vector) {
   free(vector->components);
   vector->components = 0;
+  vector->length = 0;
   free(vector);
   vector = 0;
 }

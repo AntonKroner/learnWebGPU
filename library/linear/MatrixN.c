@@ -89,11 +89,11 @@ Matrix4f Matrix4f_perspective(float fov, float aspect, float near, float far) {
   result.elements[14] = -1.0f;
   return result;
 }
-Matrix4f Matrix4f_lookAt(Vector3 position, Vector3 target, Vector3 up) {
-  const Vector3 forward =
-    Vector3_normalize(Vector3_add(target, Vector3_scale(-1.0, position)));
-  const Vector3 right = Vector3_normalize(Vector3_cross(forward, up));
-  const Vector3 u = Vector3_normalize(Vector3_cross(right, forward));
+Matrix4f Matrix4f_lookAt(Vector3f position, Vector3f target, Vector3f up) {
+  const Vector3f forward =
+    Vector3f_normalize(Vector3f_add(target, Vector3f_scale(-1.0, position)));
+  const Vector3f right = Vector3f_normalize(Vector3f_cross(forward, up));
+  const Vector3f u = Vector3f_normalize(Vector3f_cross(right, forward));
   Matrix4f ori = Matrix4f_diagonal(1.0);
   ori.elements[0] = right.components[0];
   ori.elements[1] = right.components[1];

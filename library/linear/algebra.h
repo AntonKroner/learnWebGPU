@@ -1,7 +1,10 @@
 #ifndef linear_algebra_H_
 #define linear_algebra_H_
 
+#define LINEAR_ALGEBRA_VERSION 0 0 1
+
 #include <stddef.h>
+
 typedef struct {
     double elements[16];
 } Matrix4;
@@ -59,7 +62,7 @@ void Vector_destroy(Vector* vector);
 void Vector_set(Vector vector[static 1], double values[static vector->length]);
 Vector* Vector_from(size_t length, double values[static length]);
 void(Vector_scale)(double scalar, Vector vector[static 1]);
-void(Vector_fill)(Vector* vector, double value);
+void(Vector_fill)(Vector vector[static 1], double value);
 void(Vector_add)(Vector a[static 1], Vector b[static 1], Vector result[static 1]);
 void(Vector_subtract)(Vector a[static 1], Vector b[static 1], Vector* result);
 double(Vector_inner)(Vector a[static 1], Vector b[static 1]);
@@ -165,7 +168,7 @@ Matrix4f Matrix4f_orthographic(
   int top,
   float near,
   float far);
-Matrix4f Matrix4f_lookAt(Vector3 position, Vector3 target, Vector3 up);
+Matrix4f Matrix4f_lookAt(Vector3f position, Vector3f target, Vector3f up);
 Matrix4f Matrix4f_perspective(float fov, float aspect, float near, float far);
 void Matrix4f_print(Matrix4f matrix);
 // Vector4 double
@@ -216,7 +219,7 @@ Vector3f Vector3f_scale(float scalar, Vector3f vector);
 Vector3f Vector3f_add(Vector3f a, Vector3f b);
 Vector3f Vector3f_normalize(Vector3f v);
 Vector3f Vector3f_cross(Vector3f v, Vector3f w);
-Vector3 Vector3_transform(Matrix3 matrix, Vector3 v);
+Vector3f Vector3f_transform(Matrix3f matrix, Vector3f v);
 void Vector3f_print(Vector3f vector);
 // Vector2 double
 Vector2 Vector2_make(double x, double y);
@@ -236,5 +239,25 @@ Vector2f Vector2f_add(Vector2f a, Vector2f b);
 Vector2f Vector2f_normalize(Vector2f v);
 // Vector2f Vector2_transform(Matrix2f matrix, Vector2f v);
 void Vector2f_print(Vector2f vector);
+
+#define VectorN_definitions(N)                                        \
+  Vector##N Vector##N##_make(float x, float y);                       \
+  Vector##N Vector##N##_from(float values[static N]);                 \
+  Vector##N Vector##N##_fill(float value);                            \
+  Vector##N Vector##N##_scale(float scalar, Vector##N vector);        \
+  Vector##N Vector##N##_add(Vector##N a, Vector##N b);                \
+  Vector##N Vector##N##_normalize(Vector##N v);                       \
+  void Vector##N_print(Vector##N vector);                             \
+  Vector##N##f Vector##N##f_make(float x, float y);                   \
+  Vector##N##f Vector##N##f_from(float values[static N]);             \
+  Vector##N##f Vector##N##f_fill(float value);                        \
+  Vector##N##f Vector##N##f_scale(float scalar, Vector##N##f vector); \
+  Vector##N##f Vector##N##f_add(Vector##N##f a, Vector##N##f b);      \
+  Vector##N##f Vector##N##f_normalize(Vector##N##f v);                \
+  void Vector##N##f_print(Vector##N##f vector);
+
+// VectorN_definitions(2)
+
+#undef VectorN_definitions
 
 #endif // linear_algebra_H_
