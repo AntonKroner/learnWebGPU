@@ -115,6 +115,7 @@ Vector4f Vector4f_make(float x, float y, float z, float w) {
     }                                                                  \
     return result;                                                     \
   }
+// detail: https://realtimecollisiondetection.net/blog/?p=89
 #define VectorN_areEqual(N)                                                               \
   bool Vector##N##_areEqual(Vector##N a, Vector##N b) {                                   \
     bool result = true;                                                                   \
