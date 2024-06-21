@@ -17,18 +17,18 @@
 #include "./Camera.h"
 #include "./Lightning.h"
 #include "./gui.h"
-#include "../linearAlgebra.h"
+#include "./linear/algebra.h"
 
 #define WIDTH (640)
 #define HEIGHT (480)
 
 typedef struct {
     struct {
-        Matrix4 projection;
-        Matrix4 view;
-        Matrix4 model;
+        Matrix4f projection;
+        Matrix4f view;
+        Matrix4f model;
     } matrices;
-    float color[4];
+    Vector4f color;
     float time;
     float _pad[3];
 } Uniforms;
@@ -174,8 +174,8 @@ static void onResize(GLFWwindow* window, int width, int height) {
     swapChain_attach(application, width, height);
     depthBuffer_detach(application);
     depthBuffer_attach(application, width, height);
-    application->uniforms.matrices.projection = Matrix4_transpose(
-      Matrix4_perspective(45, ((float)width / (float)height), 0.01f, 100.0f));
+    application->uniforms.matrices.projection = Matrix4f_transpose(
+      Matrix4f_perspective(45, ((float)width / (float)height), 0.01f, 100.0f));
   }
 }
 static void onMouseMove(GLFWwindow* window, double x, double y) {
@@ -183,7 +183,7 @@ static void onMouseMove(GLFWwindow* window, double x, double y) {
   if (application) {
     Application_Camera_move(&application->camera, (float)x, (float)y);
     application->uniforms.matrices.view =
-      Matrix4_transpose(Application_Camera_viewGet(application->camera));
+      Matrix4f_transpose(Application_Camera_viewGet(application->camera));
   }
 }
 static void onMouseButton(GLFWwindow* window, int button, int action, int /* mods*/) {
@@ -204,7 +204,7 @@ static void onMouseScroll(GLFWwindow* window, double x, double y) {
   if (application) {
     Application_Camera_zoom(&application->camera, (float)x, (float)y);
     application->uniforms.matrices.view =
-      Matrix4_transpose(Application_Camera_viewGet(application->camera));
+      Matrix4f_transpose(Application_Camera_viewGet(application->camera));
   }
 }
 static bool setWindowHints() {
@@ -427,15 +427,15 @@ Application* Application_create() {
     result->camera.position.y = -3.0f;
     result->camera.zoom = -1.2;
     Uniforms uniforms = {
-      .matrices.model = Matrix4_transpose(Matrix4_diagonal(1.0)),
-      .matrices.view = Matrix4_transpose(Matrix4_lookAt(
-        Vector3_make(-2.0f, -3.0f, 2.0f),
-        Vector3_fill(0.0f),
-        Vector3_make(0, 0, 1.0f))),
+      .matrices.model = Matrix4f_transpose(Matrix4f_diagonal(1.0)),
+      .matrices.view = Matrix4f_transpose(Matrix4f_lookAt(
+        Vector3f_make(-2.0f, -3.0f, 2.0f),
+        Vector3f_fill(0.0f),
+        Vector3f_make(0, 0, 1.0f))),
       .matrices.projection =
-        Matrix4_transpose(Matrix4_perspective(45, 640.0f / 480.0f, 0.01f, 100.0f)),
+        Matrix4f_transpose(Matrix4f_perspective(45, 640.0f / 480.0f, 0.01f, 100.0f)),
       .time = 0.0f,
-      .color = {0.0f, 1.0f, 0.4f, 1.0f},
+      .color = Vector4f_make(0.0f, 1.0f, 0.4f, 1.0f),
     };
     result->uniforms = uniforms;
     if (!Application_gui_attach(result->window, result->device, result->depth.format)) {

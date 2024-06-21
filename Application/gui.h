@@ -11,7 +11,7 @@
 bool Application_gui_attach(
   GLFWwindow* window,
   WGPUDevice device,
-  WGPUTextureFormat dephFormat) {
+  WGPUTextureFormat depthFormat) {
   // CIMGUI_CHECKVERSION();
   ImGui_CreateContext(0);
   ImGui_GetIO();
@@ -20,7 +20,7 @@ bool Application_gui_attach(
     .Device = device,
     .NumFramesInFlight = 3,
     .RenderTargetFormat = WGPUTextureFormat_BGRA8Unorm,
-    .DepthStencilFormat = dephFormat,
+    .DepthStencilFormat = depthFormat,
     .PipelineMultisampleState = { .count = 1,
   .mask = UINT32_MAX,
   .alphaToCoverageEnabled = false,}};
@@ -60,10 +60,14 @@ void Application_gui_render(
   // ImGui_End();
   // ImGui_Begin("Lighting", 0, 0);
   bool update = false;
-  update = ImGui_ColorEdit3("Color #0", lightning->uniforms.colors[0], 0) || update;
-  update = ImGui_DragFloat3("Direction #0", lightning->uniforms.directions[0]) || update;
-  update = ImGui_ColorEdit3("Color #1", lightning->uniforms.colors[1], 0) || update;
-  update = ImGui_DragFloat3("Direction #1", lightning->uniforms.directions[1]) || update;
+  update =
+    ImGui_ColorEdit3("Color #0", lightning->uniforms.colors[0].components, 0) || update;
+  update = ImGui_DragFloat3("Direction #0", lightning->uniforms.directions[0].components)
+           || update;
+  update =
+    ImGui_ColorEdit3("Color #1", lightning->uniforms.colors[1].components, 0) || update;
+  update = ImGui_DragFloat3("Direction #1", lightning->uniforms.directions[1].components)
+           || update;
   lightning->update = update;
   ImGui_End();
   ImGui_EndFrame();

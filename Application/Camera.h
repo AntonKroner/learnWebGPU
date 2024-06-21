@@ -5,7 +5,7 @@
 #include <tgmath.h>
 #include "webgpu.h"
 #include "GLFW/glfw3.h"
-#include "../linearAlgebra.h"
+#include "./linear/algebra.h"
 
 typedef struct {
     struct {
@@ -20,7 +20,7 @@ typedef struct {
     bool dragging;
 } Camera;
 
-Matrix4 Application_Camera_viewGet(Camera camera);
+Matrix4f Application_Camera_viewGet(Camera camera);
 void Application_Camera_move(Camera camera[static 1], float x, float y);
 void Application_Camera_activate(
   Camera camera[static 1],
@@ -30,13 +30,14 @@ void Application_Camera_activate(
   float y);
 void Application_Camera_zoom(Camera camera[static 1], float x, float y);
 
-Matrix4 Application_Camera_viewGet(Camera camera) {
+Matrix4f Application_Camera_viewGet(Camera camera) {
   float cx = cos(camera.angles.x);
   float sx = sin(camera.angles.x);
   float cy = cos(camera.angles.y);
   float sy = sin(camera.angles.y);
-  Vector3 position = Vector3_scale(exp(-camera.zoom), Vector3_make(cx * cy, sx * cy, sy));
-  return Matrix4_lookAt(position, Vector3_make(0, 0, 1.0f), Vector3_fill(1.0f));
+  Vector3f position =
+    Vector_scale(exp(-camera.zoom), Vector3f_make(cx * cy, sx * cy, sy));
+  return Matrix4f_lookAt(position, Vector3f_make(0, 0, 1.0f), Vector3f_fill(1.0f));
 }
 const float sensitivity = 0.01f;
 const float scrollSensitivity = 0.1f;
@@ -65,7 +66,7 @@ void Application_Camera_activate(
     }
   }
 }
-void Application_Camera_zoom(Camera camera[static 1], float x, float y) {
+void Application_Camera_zoom(Camera camera[static 1], float /*x*/, float y) {
   camera->zoom += scrollSensitivity * y;
 }
 
