@@ -11,7 +11,6 @@ add_executable(webgpu.exe
 	main.c
 	Application/adapter.c
 	Application/device.c
-	# linearAlgebra.c
 	library/linear/MatrixN.c
 	library/linear/Matrix.c
 	library/linear/VectorN.c
