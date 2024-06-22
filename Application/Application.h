@@ -8,6 +8,7 @@
 #include "GLFW/glfw3.h"
 #include "glfw3webgpu/glfw3webgpu.h"
 #include "cimgui/cimgui.h"
+#include "linear/algebra.h"
 #include "./adapter.h"
 #include "./device.h"
 #include "./BindGroupLayoutEntry.h"
@@ -17,10 +18,9 @@
 #include "./Camera.h"
 #include "./Lightning.h"
 #include "./gui.h"
-#include "./linear/algebra.h"
 
-#define WIDTH (640)
-#define HEIGHT (480)
+#define WIDTH (1280)
+#define HEIGHT (960)
 
 typedef struct {
     struct {
@@ -29,8 +29,8 @@ typedef struct {
         Matrix4f model;
     } matrices;
     Vector4f color;
+    Vector3f cameraPosition;
     float time;
-    float _pad[3];
 } Uniforms;
 typedef struct {
     char* name;
@@ -184,6 +184,7 @@ static void onMouseMove(GLFWwindow* window, double x, double y) {
     Application_Camera_move(&application->camera, (float)x, (float)y);
     application->uniforms.matrices.view =
       Matrix4f_transpose(Application_Camera_viewGet(application->camera));
+    application->uniforms.cameraPosition = application->camera.position;
   }
 }
 static void onMouseButton(GLFWwindow* window, int button, int action, int /* mods*/) {
@@ -205,6 +206,7 @@ static void onMouseScroll(GLFWwindow* window, double x, double y) {
     Application_Camera_zoom(&application->camera, (float)x, (float)y);
     application->uniforms.matrices.view =
       Matrix4f_transpose(Application_Camera_viewGet(application->camera));
+    application->uniforms.cameraPosition = application->camera.position;
   }
 }
 static bool setWindowHints() {
@@ -262,7 +264,7 @@ Application* Application_create() {
     depthBuffer_attach(result, WIDTH, HEIGHT);
     result->shader = Application_device_ShaderModule(
       result->device,
-      RESOURCE_DIR "/lightning/control.wgsl");
+      RESOURCE_DIR "/lightning/specularity.wgsl");
     Model model = Model_load(RESOURCE_DIR "/fourareen/fourareen.obj");
     result->vertexCount = model.vertexCount;
     buffers_attach(result, result->vertexCount);
@@ -423,8 +425,8 @@ Application* Application_create() {
       .entries = bindings,
     };
     result->bindGroup = wgpuDeviceCreateBindGroup(result->device, &bindGroupDescriptor);
-    result->camera.position.x = -2.0f;
-    result->camera.position.y = -3.0f;
+    result->camera.position.components[0] = -2.0f;
+    result->camera.position.components[1] = -3.0f;
     result->camera.zoom = -1.2;
     Uniforms uniforms = {
       .matrices.model = Matrix4f_transpose(Matrix4f_diagonal(1.0)),
@@ -435,6 +437,9 @@ Application* Application_create() {
       .matrices.projection =
         Matrix4f_transpose(Matrix4f_perspective(45, 640.0f / 480.0f, 0.01f, 100.0f)),
       .time = 0.0f,
+      .cameraPosition = { .components = { result->camera.position.components[0],
+                                          result->camera.position.components[1],
+                                          0 } },
       .color = Vector4f_make(0.0f, 1.0f, 0.4f, 1.0f),
     };
     result->uniforms = uniforms;

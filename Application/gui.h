@@ -68,6 +68,12 @@ void Application_gui_render(
     ImGui_ColorEdit3("Color #1", lightning->uniforms.colors[1].components, 0) || update;
   update = ImGui_DragFloat3("Direction #1", lightning->uniforms.directions[1].components)
            || update;
+  update =
+    ImGui_SliderFloat("Hardness", &lightning->uniforms.hardness, 1.0f, 100.0f) || update;
+  update = ImGui_SliderFloat("Diffusivity", &lightning->uniforms.diffusivity, 0.0f, 1.0f)
+           || update;
+  update = ImGui_SliderFloat("Specularity", &lightning->uniforms.specularity, 0.0f, 1.0f)
+           || update;
   lightning->update = update;
   ImGui_End();
   ImGui_EndFrame();

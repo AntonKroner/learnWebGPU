@@ -29,7 +29,7 @@ static void limitsSet(
     supported.limits.minStorageBufferOffsetAlignment;
   required->limits.minUniformBufferOffsetAlignment =
     supported.limits.minUniformBufferOffsetAlignment;
-  required->limits.maxInterStageShaderComponents = 8;
+  required->limits.maxInterStageShaderComponents = 11;
   required->limits.maxBindGroups = 1;
   required->limits.maxUniformBuffersPerShaderStage = 1;
   required->limits.maxUniformBufferBindingSize = 16 * 4 * sizeof(float);

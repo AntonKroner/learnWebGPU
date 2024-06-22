@@ -5,7 +5,7 @@
 #include <stdio.h>
 #define TINYOBJ_LOADER_C_IMPLEMENTATION
 #include "tinyobj_loader_c.h"
-#include "./linear/algebra.h"
+#include "linear/algebra.h"
 
 typedef struct {
     Vector3f position;
