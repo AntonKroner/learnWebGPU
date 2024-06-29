@@ -505,6 +505,85 @@ void Application_render(Application application[static 1]) {
   wgpuSwapChainPresent(application->swapChain);
   wgpuDeviceTick(application->device);
 }
+
+static WGPUBindGroupLayout bindGroupLayout_attach(Application application[static 1]) {
+  const size_t entryCount = 2;
+  WGPUBindGroupLayoutEntry bindingLayouts[/*entryCount*/] = {
+    Application_BindGroupLayoutEntry_make(),
+    Application_BindGroupLayoutEntry_make(),
+  };
+  // input buffer
+  bindingLayouts[0].binding = 0;
+  bindingLayouts[0].buffer.type = WGPUBufferBindingType_ReadOnlyStorage;
+  bindingLayouts[0].visibility = WGPUShaderStage_Compute;
+  // output buffer
+  bindingLayouts[1].binding = 1;
+  bindingLayouts[1].buffer.type = WGPUBufferBindingType_Storage;
+  bindingLayouts[1].visibility = WGPUShaderStage_Compute;
+  WGPUBindGroupLayoutDescriptor descriptor = {
+    .nextInChain = 0,
+    .label = "compute bind group layout",
+    .entryCount = entryCount,
+    .entries = bindingLayouts,
+  };
+  WGPUBindGroupLayout result =
+    wgpuDeviceCreateBindGroupLayout(application->device, &descriptor);
+  return result;
+}
+static WGPUBindGroup bindGroup_attach(Application application[static 1]) {
+  WGPUBindGroupLayout layout = bindGroupLayout_attach(application);
+  WGPUBindGroupEntry bindings[] = {
+    {
+     .nextInChain = 0,
+     .binding = 0,
+     .buffer = 0, // input buffer
+ .offset = 0,
+     .size = 0 // input buffer size,
+ },
+    {
+     .nextInChain = 0,
+     .binding = 0,
+     .buffer = 0, // output buffer
+ .offset = 0,
+     .size = 0 // output buffer size,
+    },
+  };
+  WGPUBindGroupDescriptor descriptor = {
+    .nextInChain = 0,
+    .layout = layout,
+    .entryCount = 2,
+    .entries = bindings,
+  };
+  WGPUBindGroup result = wgpuDeviceCreateBindGroup(application->device, &descriptor);
+  return result;
+}
+static WGPUComputePipeline computePipeline_attach(Application application[static 1]) {
+  WGPUShaderModule shader = Application_device_ShaderModule(
+    application->device,
+    RESOURCE_DIR "/compute/pipeline.wgsl");
+  WGPUBindGroupLayout bindGroupLayout = bindGroupLayout_attach(application);
+  WGPUPipelineLayoutDescriptor layoutDescriptor = {
+    .nextInChain = 0,
+    .label = "compute pipeline layout",
+    .bindGroupLayoutCount = 1,
+    .bindGroupLayouts = &bindGroupLayout,
+  };
+  WGPUPipelineLayout layout =
+    wgpuDeviceCreatePipelineLayout(application->device, &layoutDescriptor);
+  WGPUComputePipelineDescriptor descriptor = {
+    .nextInChain = 0,
+    .label = "pipeline descriptor",
+    .layout = layout,
+    .compute.entryPoint = "main",
+    .compute.module = shader,
+    .compute.constantCount = 0,
+    .compute.constants = 0,
+  };
+  WGPUComputePipeline pipeline =
+    wgpuDeviceCreateComputePipeline(application->device, &descriptor);
+  return pipeline;
+}
+
 void Application_compute(Application application[static 1]) {
   // Initialize a command encoder
   WGPUCommandEncoderDescriptor commandEncoderDesc = {
@@ -515,6 +594,21 @@ void Application_compute(Application application[static 1]) {
     wgpuDeviceCreateCommandEncoder(application->device, &commandEncoderDesc);
 
   // Create and use compute pass here!
+  WGPUComputePassDescriptor descriptor = {
+    .nextInChain = 0,
+    .label = "compute pass",
+    .timestampWriteCount = 0,
+    .timestampWrites = 0,
+  };
+  WGPUComputePassEncoder pass = wgpuCommandEncoderBeginComputePass(encoder, &descriptor);
+
+  WGPUComputePipeline pipeline = computePipeline_attach(application);
+
+  wgpuComputePassEncoderSetPipeline(pass, pipeline);
+  wgpuComputePassEncoderSetBindGroup(pass, 0, 0, 0, 0);
+  wgpuComputePassEncoderDispatchWorkgroups(pass, 1, 1, 1);
+
+  wgpuComputePassEncoderEnd(pass);
   WGPUCommandBufferDescriptor cmdBufferDescriptor = {
     .nextInChain = 0,
     .label = "command buffer",
@@ -525,6 +619,7 @@ void Application_compute(Application application[static 1]) {
   wgpuQueueSubmit(application->queue, 1, &commands);
   wgpuCommandBufferRelease(commands);
   wgpuCommandEncoderRelease(encoder);
+  wgpuComputePassEncoderRelease(pass);
   // maybe?  wgpuDeviceTick(application->device);
 }
 void Application_destroy(Application* application) {
