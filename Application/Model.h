@@ -31,7 +31,7 @@ static void loadFile(
     fseek(handler, 0, SEEK_END);
     string_size = ftell(handler);
     rewind(handler);
-    *buffer = (char*)malloc(sizeof(char) * (string_size + 1));
+    *buffer = malloc(sizeof(char) * (string_size + 1));
     read_size = fread(*buffer, sizeof(char), (size_t)string_size, handler);
     (*buffer)[string_size] = '\0';
     if (string_size != read_size) {

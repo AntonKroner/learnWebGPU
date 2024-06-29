@@ -63,7 +63,7 @@ typedef struct {
     Application_Lighting lightning;
 } Application;
 
-Application* Application_create();
+Application* Application_create(bool inspect);
 bool Application_shouldClose(Application application[static 1]);
 void Application_render(Application application[static 1]);
 void Application_destroy(Application* application);
@@ -214,7 +214,7 @@ static bool setWindowHints() {
   glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
   return true;
 }
-Application* Application_create() {
+Application* Application_create(bool inspect) {
   WGPUInstanceDescriptor descriptor = { .nextInChain = 0 };
   Application* result = calloc(1, sizeof(*result));
   if (!result) {
@@ -251,9 +251,14 @@ Application* Application_create() {
     WGPURequestAdapterOptions adapterOptions = {
       .nextInChain = 0,
       .compatibleSurface = result->surface,
+      .powerPreference = WGPUPowerPreference_HighPerformance,
     };
     WGPUAdapter adapter = Application_adapter_request(result->instance, &adapterOptions);
     result->device = Application_device_request(adapter);
+    if (inspect) {
+      Application_device_inspect(result->device);
+      Application_adapter_inspect(adapter);
+    }
     wgpuAdapterRelease(adapter);
     result->queue = wgpuDeviceGetQueue(result->device);
     int width = 0;
@@ -499,6 +504,28 @@ void Application_render(Application application[static 1]) {
   wgpuCommandBufferRelease(command);
   wgpuSwapChainPresent(application->swapChain);
   wgpuDeviceTick(application->device);
+}
+void Application_compute(Application application[static 1]) {
+  // Initialize a command encoder
+  WGPUCommandEncoderDescriptor commandEncoderDesc = {
+    .nextInChain = 0,
+    .label = "Command Encoder",
+  };
+  WGPUCommandEncoder encoder =
+    wgpuDeviceCreateCommandEncoder(application->device, &commandEncoderDesc);
+
+  // Create and use compute pass here!
+  WGPUCommandBufferDescriptor cmdBufferDescriptor = {
+    .nextInChain = 0,
+    .label = "command buffer",
+  };
+  // Encode and submit the GPU commands
+  WGPUCommandBuffer commands = wgpuCommandEncoderFinish(encoder, &cmdBufferDescriptor);
+
+  wgpuQueueSubmit(application->queue, 1, &commands);
+  wgpuCommandBufferRelease(commands);
+  wgpuCommandEncoderRelease(encoder);
+  // maybe?  wgpuDeviceTick(application->device);
 }
 void Application_destroy(Application* application) {
   Application_Lightning_destroy(application->lightning);

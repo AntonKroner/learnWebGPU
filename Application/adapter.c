@@ -6,69 +6,41 @@
 
 typedef struct {
     WGPUAdapter adapter;
-    bool requestEnded;
-} UserData;
+    bool done;
+} Response;
 
 static void adapter_onRequest(
   WGPURequestAdapterStatus status,
   WGPUAdapter adapter,
   const char* message,
-  void* pUserData) {
-  UserData* userData = (UserData*)pUserData;
-  if (status == WGPURequestAdapterStatus_Success) {
-    userData->adapter = adapter;
-  }
-  else {
+  void* inputResponse) {
+  Response* response = (Response*)inputResponse;
+  if (status != WGPURequestAdapterStatus_Success) {
     printf("Could not get WebGPU adapter: %s\n", message);
   }
-  userData->requestEnded = true;
+  else {
+    response->adapter = adapter;
+  }
+  response->done = true;
 }
 WGPUAdapter Application_adapter_request(
   WGPUInstance instance,
   const WGPURequestAdapterOptions* options) {
-  UserData userData = { .adapter = 0, .requestEnded = false };
+  Response userData = { .adapter = 0, .done = false };
   wgpuInstanceRequestAdapter(instance, options, adapter_onRequest, (void*)&userData);
-  assert(userData.requestEnded);
+  assert(userData.done);
   return userData.adapter;
 }
-#define FEATURE_STRINGIFY(feature) \
-  case feature:                    \
-    return #feature
-static const char* adapter_featureToString(WGPUFeatureName feature) {
-  switch (feature) {
-    FEATURE_STRINGIFY(WGPUFeatureName_Undefined);
-    FEATURE_STRINGIFY(WGPUFeatureName_DepthClipControl);
-    FEATURE_STRINGIFY(WGPUFeatureName_Depth32FloatStencil8);
-    FEATURE_STRINGIFY(WGPUFeatureName_TimestampQuery);
-    FEATURE_STRINGIFY(WGPUFeatureName_PipelineStatisticsQuery);
-    FEATURE_STRINGIFY(WGPUFeatureName_TextureCompressionBC);
-    FEATURE_STRINGIFY(WGPUFeatureName_TextureCompressionETC2);
-    FEATURE_STRINGIFY(WGPUFeatureName_TextureCompressionASTC);
-    FEATURE_STRINGIFY(WGPUFeatureName_IndirectFirstInstance);
-    FEATURE_STRINGIFY(WGPUFeatureName_ShaderF16);
-    FEATURE_STRINGIFY(WGPUFeatureName_RG11B10UfloatRenderable);
-    FEATURE_STRINGIFY(WGPUFeatureName_BGRA8UnormStorage);
-    FEATURE_STRINGIFY(WGPUFeatureName_Float32Filterable);
-    FEATURE_STRINGIFY(WGPUFeatureName_DawnShaderFloat16);
-    FEATURE_STRINGIFY(WGPUFeatureName_DawnInternalUsages);
-    FEATURE_STRINGIFY(WGPUFeatureName_DawnMultiPlanarFormats);
-    FEATURE_STRINGIFY(WGPUFeatureName_DawnNative);
-    FEATURE_STRINGIFY(WGPUFeatureName_ChromiumExperimentalDp4a);
-    FEATURE_STRINGIFY(WGPUFeatureName_TimestampQueryInsidePasses);
-    FEATURE_STRINGIFY(WGPUFeatureName_ImplicitDeviceSynchronization);
-    FEATURE_STRINGIFY(WGPUFeatureName_SurfaceCapabilities);
-    FEATURE_STRINGIFY(WGPUFeatureName_TransientAttachments);
-    FEATURE_STRINGIFY(WGPUFeatureName_MSAARenderToSingleSampled);
-    FEATURE_STRINGIFY(WGPUFeatureName_Force32);
-  }
-}
+static const char* featureStringify(WGPUFeatureName feature);
+static const char* typeStringify(WGPUAdapterType type);
+static const char* backendStringify(WGPUBackendType type);
 void Application_adapter_inspect(WGPUAdapter adapter) {
   size_t featureCount = wgpuAdapterEnumerateFeatures(adapter, 0);
   WGPUFeatureName* features = calloc(featureCount, sizeof(*features));
   wgpuAdapterEnumerateFeatures(adapter, features);
   printf("Adapter Features:\n");
   for (size_t i = 0; featureCount > i; i++) {
-    printf("- %i: %s\n", features[i], adapter_featureToString(features[i]));
+    printf("- %i: %s\n", features[i], featureStringify(features[i]));
   }
   free(features);
   WGPUSupportedLimits limits = { .nextInChain = 0 };
@@ -145,6 +117,62 @@ void Application_adapter_inspect(WGPUAdapter adapter) {
   if (properties.architecture) {
     printf("- architecture: %s\n", properties.architecture);
   }
-  printf("- adapterType: %u\n", properties.adapterType);
-  printf("- backendType: %u\n", properties.backendType);
+  printf("- adapterType: %s\n", typeStringify(properties.adapterType));
+  printf("- backendType: %s\n", backendStringify(properties.backendType));
+  printf("- compatibility mode: %u\n", properties.compatibilityMode);
 }
+#define STRINGIFY(value) \
+  case value:            \
+    return #value
+static const char* featureStringify(WGPUFeatureName feature) {
+  switch (feature) {
+    STRINGIFY(WGPUFeatureName_Undefined);
+    STRINGIFY(WGPUFeatureName_DepthClipControl);
+    STRINGIFY(WGPUFeatureName_Depth32FloatStencil8);
+    STRINGIFY(WGPUFeatureName_TimestampQuery);
+    STRINGIFY(WGPUFeatureName_PipelineStatisticsQuery);
+    STRINGIFY(WGPUFeatureName_TextureCompressionBC);
+    STRINGIFY(WGPUFeatureName_TextureCompressionETC2);
+    STRINGIFY(WGPUFeatureName_TextureCompressionASTC);
+    STRINGIFY(WGPUFeatureName_IndirectFirstInstance);
+    STRINGIFY(WGPUFeatureName_ShaderF16);
+    STRINGIFY(WGPUFeatureName_RG11B10UfloatRenderable);
+    STRINGIFY(WGPUFeatureName_BGRA8UnormStorage);
+    STRINGIFY(WGPUFeatureName_Float32Filterable);
+    STRINGIFY(WGPUFeatureName_DawnShaderFloat16);
+    STRINGIFY(WGPUFeatureName_DawnInternalUsages);
+    STRINGIFY(WGPUFeatureName_DawnMultiPlanarFormats);
+    STRINGIFY(WGPUFeatureName_DawnNative);
+    STRINGIFY(WGPUFeatureName_ChromiumExperimentalDp4a);
+    STRINGIFY(WGPUFeatureName_TimestampQueryInsidePasses);
+    STRINGIFY(WGPUFeatureName_ImplicitDeviceSynchronization);
+    STRINGIFY(WGPUFeatureName_SurfaceCapabilities);
+    STRINGIFY(WGPUFeatureName_TransientAttachments);
+    STRINGIFY(WGPUFeatureName_MSAARenderToSingleSampled);
+    STRINGIFY(WGPUFeatureName_Force32);
+  }
+}
+static const char* typeStringify(WGPUAdapterType type) {
+  switch (type) {
+    STRINGIFY(WGPUAdapterType_DiscreteGPU);
+    STRINGIFY(WGPUAdapterType_IntegratedGPU);
+    STRINGIFY(WGPUAdapterType_CPU);
+    STRINGIFY(WGPUAdapterType_Unknown);
+    STRINGIFY(WGPUAdapterType_Force32);
+  }
+}
+static const char* backendStringify(WGPUBackendType type) {
+  switch (type) {
+    STRINGIFY(WGPUBackendType_Undefined);
+    STRINGIFY(WGPUBackendType_Null);
+    STRINGIFY(WGPUBackendType_WebGPU);
+    STRINGIFY(WGPUBackendType_D3D11);
+    STRINGIFY(WGPUBackendType_D3D12);
+    STRINGIFY(WGPUBackendType_Metal);
+    STRINGIFY(WGPUBackendType_Vulkan);
+    STRINGIFY(WGPUBackendType_OpenGL);
+    STRINGIFY(WGPUBackendType_OpenGLES);
+    STRINGIFY(WGPUBackendType_Force32);
+  }
+}
+#undef STRINGIFY

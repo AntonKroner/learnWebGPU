@@ -9,14 +9,10 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#define STRINGIFY(feature) \
-  case feature:            \
-    return #feature
-
 typedef struct {
     WGPUDevice device;
-    bool requestEnded;
-} DeviceData;
+    bool done;
+} Response;
 
 static void limitsSet(
   WGPURequiredLimits required[static 1],
@@ -43,29 +39,27 @@ static void device_onRequest(
   WGPURequestDeviceStatus status,
   WGPUDevice device,
   const char* message,
-  void* pUserData) {
-  DeviceData* userData = (DeviceData*)pUserData;
-  if (status == WGPURequestDeviceStatus_Success) {
-    userData->device = device;
-  }
-  else {
+  void* inputResponse) {
+  Response* response = (Response*)inputResponse;
+  if (status != WGPURequestDeviceStatus_Success) {
     printf("Could not get WebGPU device: %s\n", message);
   }
-  userData->requestEnded = true;
-}
-static char* errorToString(WGPUErrorType error) {
-  switch (error) {
-    STRINGIFY(WGPUErrorType_NoError);
-    STRINGIFY(WGPUErrorType_Validation);
-    STRINGIFY(WGPUErrorType_OutOfMemory);
-    STRINGIFY(WGPUErrorType_Internal);
-    STRINGIFY(WGPUErrorType_Unknown);
-    STRINGIFY(WGPUErrorType_DeviceLost);
-    STRINGIFY(WGPUErrorType_Force32);
+  else {
+    response->device = device;
   }
+  response->done = true;
 }
+static char* logTypeStringify(WGPULoggingType type);
+static void onLog(WGPULoggingType type, const char* message, void* /* userdata */) {
+  printf("Device log %s: ", logTypeStringify(type));
+  if (message) {
+    printf("%s ", message);
+  }
+  printf("\n");
+}
+static char* errorStringify(WGPUErrorType error);
 static void onDeviceError(WGPUErrorType type, const char* message, void* /* pUserData */) {
-  printf("Uncaptured device error: %s\n", errorToString(type));
+  printf("Uncaptured device error: %s\n", errorStringify(type));
   if (message) {
     printf("%s ", message);
   }
@@ -88,84 +82,26 @@ WGPUDevice Application_device_request(WGPUAdapter adapter) {
     .requiredLimits = &required,
     .defaultQueue = { .label = "default queueuue" }
   };
-  DeviceData userData = { .device = 0, .requestEnded = 0 };
-  wgpuAdapterRequestDevice(adapter, &descriptor, device_onRequest, (void*)&userData);
-  assert(userData.requestEnded);
-  wgpuDeviceSetUncapturedErrorCallback(userData.device, onDeviceError, 0);
-  return userData.device;
+  Response response = { .device = 0, .done = 0 };
+  wgpuAdapterRequestDevice(adapter, &descriptor, device_onRequest, (void*)&response);
+  assert(response.done);
+  wgpuDeviceSetUncapturedErrorCallback(response.device, onDeviceError, 0);
+  wgpuDeviceSetLoggingCallback(response.device, onLog, 0);
+  return response.device;
 }
-static char* readFile(const char* filename) {
-  char* result = 0;
-  FILE* input = fopen(filename, "rb");
-  if (!input) {
-    result = 0;
-  }
-  else {
-    const size_t maxSize = 10 * 1024 * 1024;
-    size_t size = BUFSIZ;
-    result = (char*)malloc(size * sizeof(*result));
-    size_t total = 0;
-    while (!feof(input) && !ferror(input) && (maxSize > size)) {
-      if (total + BUFSIZ > size) {
-        size = size * 2;
-        result = (char*)realloc(result, size);
-      }
-      char* buffer = result + total;
-      total += fread(buffer, 1, BUFSIZ, input);
-    }
-    fclose(input);
-    result = (char*)realloc(result, total + 1);
-    result[total] = '\0';
-  }
-  return result;
-}
-static void WGPUCompilationMessage_print(const WGPUCompilationMessage message) {
-  switch (message.type) {
-    case WGPUCompilationMessageType_Error:
-      perror("Error:\n");
-      break;
-    case WGPUCompilationMessageType_Warning:
-      perror("Warning:\n");
-      break;
-    case WGPUCompilationMessageType_Info:
-      perror("Info:\n");
-      break;
-    case WGPUCompilationMessageType_Force32:
-      perror("Force32:\n");
-      break;
-  }
-  if (message.message) {
-    fprintf(stderr, "%s:\n", message.message);
-  }
-  fprintf(stderr, "lineNum: %zu\n", message.lineNum);
-  fprintf(stderr, "linePos: %zu\n", message.linePos);
-  fprintf(stderr, "offset: %zu\n", message.offset);
-  fprintf(stderr, "length: %zu\n", message.length);
-  fprintf(stderr, "utf16LinePos: %zu\n", message.utf16LinePos);
-  fprintf(stderr, "utf16Offset: %zu\n", message.utf16Offset);
-  fprintf(stderr, "utf16Length: %zu\n", message.utf16Length);
-}
-static char* compilationStatusPrint(WGPUCompilationInfoRequestStatus status) {
-  switch (status) {
-    case WGPUCompilationInfoRequestStatus_Success:
-      return "Success";
-    case WGPUCompilationInfoRequestStatus_Error:
-      return "Error";
-    case WGPUCompilationInfoRequestStatus_DeviceLost:
-      return "DeviceLost";
-    case WGPUCompilationInfoRequestStatus_Unknown:
-      return "Unknown";
-    case WGPUCompilationInfoRequestStatus_Force32:
-      return "Force32";
-  }
-}
+static char* readFile(const char* filename);
+static void WGPUCompilationMessageStringify(const WGPUCompilationMessage message);
+static char* compilationStatusStringify(WGPUCompilationInfoRequestStatus status);
 static void compilationPrint(
   WGPUCompilationInfoRequestStatus status,
   struct WGPUCompilationInfo const* info,
   void* /* userdata */) {
-  fprintf(stderr, "Shader module compilation status: %s\n", compilationStatusPrint(status));
+  fprintf(
+    stderr,
+    "Shader module compilation status: %s\n",
+    compilationStatusStringify(status));
   for (size_t i = 0; info->messageCount > i; i++) {
-    WGPUCompilationMessage_print(info->messages[i]);
+    WGPUCompilationMessageStringify(info->messages[i]);
   }
 }
 WGPUShaderModule Application_device_ShaderModule(WGPUDevice device, const char* path) {
@@ -174,13 +110,13 @@ WGPUShaderModule Application_device_ShaderModule(WGPUDevice device, const char* 
     fprintf(stderr, "Error opening %s: %s\n", path, strerror(errno));
     return 0;
   }
-  WGPUShaderModuleWGSLDescriptor shaderCodeDescriptor = {
+  WGPUShaderModuleWGSLDescriptor codeDescriptor = {
     .chain.next = 0,
     .chain.sType = WGPUSType_ShaderModuleWGSLDescriptor,
     .code = shader,
   };
   WGPUShaderModuleDescriptor shaderDescriptor = {
-    .nextInChain = &shaderCodeDescriptor.chain,
+    .nextInChain = &codeDescriptor.chain,
     .label = path,
   };
   WGPUShaderModule result = wgpuDeviceCreateShaderModule(device, &shaderDescriptor);
@@ -268,9 +204,7 @@ static void writeMipMaps(
     .origin = {0, 0, 0},
     .aspect = WGPUTextureAspect_All,
   };
-  WGPUTextureDataLayout source = {
-    .offset = 0,
-  };
+  WGPUTextureDataLayout source = { .offset = 0 };
   WGPUExtent3D mipLevelSize = size;
   WGPUExtent3D previousMipLevelSize;
   uint32_t pixelCount = 4 * mipLevelSize.width * mipLevelSize.height;
@@ -334,26 +268,20 @@ WGPUTexture Application_device_Texture_load(
   if (!pixels) {
     return 0;
   }
-  WGPUTextureDescriptor textureDescriptor = {
+  WGPUTextureDescriptor descriptor = {
     .nextInChain = 0,
     .dimension = WGPUTextureDimension_2D,
  // by convention for bmp, png and jpg file. Be careful with other formats,
     .format = WGPUTextureFormat_RGBA8Unorm,
-    .mipLevelCount =
-      bit_width(fmax(textureDescriptor.size.width, textureDescriptor.size.height)),
+    .mipLevelCount = bit_width(fmax(descriptor.size.width, descriptor.size.height)),
     .sampleCount = 1,
     .size = {(unsigned int)width, (unsigned int)height, 1},
     .usage = WGPUTextureUsage_TextureBinding | WGPUTextureUsage_CopyDst,
     .viewFormatCount = 0,
     .viewFormats = 0,
   };
-  WGPUTexture texture = wgpuDeviceCreateTexture(device, &textureDescriptor);
-  writeMipMaps(
-    device,
-    texture,
-    textureDescriptor.size,
-    textureDescriptor.mipLevelCount,
-    pixels);
+  WGPUTexture texture = wgpuDeviceCreateTexture(device, &descriptor);
+  writeMipMaps(device, texture, descriptor.size, descriptor.mipLevelCount, pixels);
   stbi_image_free(pixels);
   if (view) {
     WGPUTextureViewDescriptor viewDescriptor = {
@@ -361,11 +289,100 @@ WGPUTexture Application_device_Texture_load(
       .baseArrayLayer = 0,
       .arrayLayerCount = 1,
       .baseMipLevel = 0,
-      .mipLevelCount = textureDescriptor.mipLevelCount,
+      .mipLevelCount = descriptor.mipLevelCount,
       .dimension = WGPUTextureViewDimension_2D,
-      .format = textureDescriptor.format,
+      .format = descriptor.format,
     };
     *view = wgpuTextureCreateView(texture, &viewDescriptor);
   }
   return texture;
 }
+static char* readFile(const char* filename) {
+  char* result = 0;
+  FILE* input = fopen(filename, "rb");
+  if (!input) {
+    result = 0;
+  }
+  else {
+    const size_t maxSize = 10 * 1024 * 1024;
+    size_t size = BUFSIZ;
+    result = malloc(size * sizeof(*result));
+    size_t total = 0;
+    while (!feof(input) && !ferror(input) && (maxSize > size)) {
+      if (total + BUFSIZ > size) {
+        size = size * 2;
+        result = realloc(result, size);
+      }
+      char* buffer = result + total;
+      total += fread(buffer, 1, BUFSIZ, input);
+    }
+    fclose(input);
+    result = realloc(result, total + 1);
+    result[total] = '\0';
+  }
+  return result;
+}
+#define STRINGIFY(value) \
+  case value:            \
+    return #value
+static char* logTypeStringify(WGPULoggingType type) {
+  switch (type) {
+    STRINGIFY(WGPULoggingType_Verbose);
+    STRINGIFY(WGPULoggingType_Info);
+    STRINGIFY(WGPULoggingType_Warning);
+    STRINGIFY(WGPULoggingType_Error);
+    STRINGIFY(WGPULoggingType_Force32);
+  }
+}
+static char* errorStringify(WGPUErrorType error) {
+  switch (error) {
+    STRINGIFY(WGPUErrorType_NoError);
+    STRINGIFY(WGPUErrorType_Validation);
+    STRINGIFY(WGPUErrorType_OutOfMemory);
+    STRINGIFY(WGPUErrorType_Internal);
+    STRINGIFY(WGPUErrorType_Unknown);
+    STRINGIFY(WGPUErrorType_DeviceLost);
+    STRINGIFY(WGPUErrorType_Force32);
+  }
+}
+static char* compilationStatusStringify(WGPUCompilationInfoRequestStatus status) {
+  switch (status) {
+    case WGPUCompilationInfoRequestStatus_Success:
+      return "Success";
+    case WGPUCompilationInfoRequestStatus_Error:
+      return "Error";
+    case WGPUCompilationInfoRequestStatus_DeviceLost:
+      return "DeviceLost";
+    case WGPUCompilationInfoRequestStatus_Unknown:
+      return "Unknown";
+    case WGPUCompilationInfoRequestStatus_Force32:
+      return "Force32";
+  }
+}
+static void WGPUCompilationMessageStringify(const WGPUCompilationMessage message) {
+  switch (message.type) {
+    case WGPUCompilationMessageType_Error:
+      perror("Error:\n");
+      break;
+    case WGPUCompilationMessageType_Warning:
+      perror("Warning:\n");
+      break;
+    case WGPUCompilationMessageType_Info:
+      perror("Info:\n");
+      break;
+    case WGPUCompilationMessageType_Force32:
+      perror("Force32:\n");
+      break;
+  }
+  if (message.message) {
+    fprintf(stderr, "%s:\n", message.message);
+  }
+  fprintf(stderr, "lineNum: %zu\n", message.lineNum);
+  fprintf(stderr, "linePos: %zu\n", message.linePos);
+  fprintf(stderr, "offset: %zu\n", message.offset);
+  fprintf(stderr, "length: %zu\n", message.length);
+  fprintf(stderr, "utf16LinePos: %zu\n", message.utf16LinePos);
+  fprintf(stderr, "utf16Offset: %zu\n", message.utf16Offset);
+  fprintf(stderr, "utf16Length: %zu\n", message.utf16Length);
+}
+#undef STRINGIFY
