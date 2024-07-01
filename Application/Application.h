@@ -1,6 +1,7 @@
 #ifndef Application_H_
 #define Application_H_
 
+#include "Compute.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -61,6 +62,7 @@ typedef struct {
     Uniforms uniforms;
     Camera camera;
     Application_Lighting lightning;
+    Application_Compute compute;
 } Application;
 
 Application* Application_create(bool inspect);
@@ -505,85 +507,6 @@ void Application_render(Application application[static 1]) {
   wgpuSwapChainPresent(application->swapChain);
   wgpuDeviceTick(application->device);
 }
-
-static WGPUBindGroupLayout bindGroupLayout_attach(Application application[static 1]) {
-  const size_t entryCount = 2;
-  WGPUBindGroupLayoutEntry bindingLayouts[/*entryCount*/] = {
-    Application_BindGroupLayoutEntry_make(),
-    Application_BindGroupLayoutEntry_make(),
-  };
-  // input buffer
-  bindingLayouts[0].binding = 0;
-  bindingLayouts[0].buffer.type = WGPUBufferBindingType_ReadOnlyStorage;
-  bindingLayouts[0].visibility = WGPUShaderStage_Compute;
-  // output buffer
-  bindingLayouts[1].binding = 1;
-  bindingLayouts[1].buffer.type = WGPUBufferBindingType_Storage;
-  bindingLayouts[1].visibility = WGPUShaderStage_Compute;
-  WGPUBindGroupLayoutDescriptor descriptor = {
-    .nextInChain = 0,
-    .label = "compute bind group layout",
-    .entryCount = entryCount,
-    .entries = bindingLayouts,
-  };
-  WGPUBindGroupLayout result =
-    wgpuDeviceCreateBindGroupLayout(application->device, &descriptor);
-  return result;
-}
-static WGPUBindGroup bindGroup_attach(Application application[static 1]) {
-  WGPUBindGroupLayout layout = bindGroupLayout_attach(application);
-  WGPUBindGroupEntry bindings[] = {
-    {
-     .nextInChain = 0,
-     .binding = 0,
-     .buffer = 0, // input buffer
- .offset = 0,
-     .size = 0 // input buffer size,
- },
-    {
-     .nextInChain = 0,
-     .binding = 0,
-     .buffer = 0, // output buffer
- .offset = 0,
-     .size = 0 // output buffer size,
-    },
-  };
-  WGPUBindGroupDescriptor descriptor = {
-    .nextInChain = 0,
-    .layout = layout,
-    .entryCount = 2,
-    .entries = bindings,
-  };
-  WGPUBindGroup result = wgpuDeviceCreateBindGroup(application->device, &descriptor);
-  return result;
-}
-static WGPUComputePipeline computePipeline_attach(Application application[static 1]) {
-  WGPUShaderModule shader = Application_device_ShaderModule(
-    application->device,
-    RESOURCE_DIR "/compute/pipeline.wgsl");
-  WGPUBindGroupLayout bindGroupLayout = bindGroupLayout_attach(application);
-  WGPUPipelineLayoutDescriptor layoutDescriptor = {
-    .nextInChain = 0,
-    .label = "compute pipeline layout",
-    .bindGroupLayoutCount = 1,
-    .bindGroupLayouts = &bindGroupLayout,
-  };
-  WGPUPipelineLayout layout =
-    wgpuDeviceCreatePipelineLayout(application->device, &layoutDescriptor);
-  WGPUComputePipelineDescriptor descriptor = {
-    .nextInChain = 0,
-    .label = "pipeline descriptor",
-    .layout = layout,
-    .compute.entryPoint = "main",
-    .compute.module = shader,
-    .compute.constantCount = 0,
-    .compute.constants = 0,
-  };
-  WGPUComputePipeline pipeline =
-    wgpuDeviceCreateComputePipeline(application->device, &descriptor);
-  return pipeline;
-}
-
 void Application_compute(Application application[static 1]) {
   // Initialize a command encoder
   WGPUCommandEncoderDescriptor commandEncoderDesc = {
