@@ -26,10 +26,10 @@ static void adapter_onRequest(
 WGPUAdapter Application_adapter_request(
   WGPUInstance instance,
   const WGPURequestAdapterOptions* options) {
-  Response userData = { .adapter = 0, .done = false };
-  wgpuInstanceRequestAdapter(instance, options, adapter_onRequest, (void*)&userData);
-  assert(userData.done);
-  return userData.adapter;
+  Response response = { .adapter = 0, .done = false };
+  wgpuInstanceRequestAdapter(instance, options, adapter_onRequest, (void*)&response);
+  assert(response.done);
+  return response.adapter;
 }
 static const char* featureStringify(WGPUFeatureName feature);
 static const char* typeStringify(WGPUAdapterType type);

@@ -19,6 +19,7 @@ add_executable(webgpu.exe
 set_target_properties(webgpu.exe PROPERTIES
     C_STANDARD 23
     COMPILE_WARNING_AS_ERROR ON
+		RUNTIME_OUTPUT_DIRECTORY ../
 )
 target_compile_definitions(webgpu.exe PRIVATE
     RESOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources"

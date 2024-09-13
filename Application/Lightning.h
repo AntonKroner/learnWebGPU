@@ -1,7 +1,7 @@
 #ifndef Application_Lightning_H_
 #define Application_Lightning_H_
 
-#include <stdio.h>
+// #include <stdio.h>
 #include <stdbool.h>
 #include "webgpu.h"
 #include "linear/algebra.h"
@@ -30,11 +30,11 @@ Application_Lighting Application_Lightning_create(WGPUDevice device) {
   Application_Lighting result = {
     .update = true,
     .buffer = wgpuDeviceCreateBuffer(device, &bufferDescriptor),
-    .uniforms = {.colors = { Vector4f_make(0.5f, -0.9f, 0.1f, 1.0f), Vector4f_make(1.0f, 0.4f, 0.3f, 1.0f), },
-                 .directions = { Vector4f_make(1.0f, 0.9f, 0.6f, 1.0f), Vector4f_make(0.6f, 0.9f, 1.0f, 1.0f), },
-								 .diffusivity = 1.0f,
-								 .specularity = 0.5f,
-								 .hardness = 1.0f}
+    .uniforms.colors = { Vector4f_make(0.5f, -0.9f, 0.1f, 1.0f), Vector4f_make(1.0f, 0.4f, 0.3f, 1.0f), },
+		.uniforms.directions = { Vector4f_make(1.0f, 0.9f, 0.6f, 1.0f), Vector4f_make(0.6f, 0.9f, 1.0f, 1.0f), },
+		.uniforms.diffusivity = 1.0f,
+		.uniforms.specularity = 0.5f,
+		.uniforms.hardness = 1.0f
   };
   // maybe check if the created buffer is null?
   return result;
