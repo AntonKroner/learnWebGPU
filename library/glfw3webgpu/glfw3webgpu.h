@@ -6,7 +6,7 @@
  *   https://eliemichel.github.io/LearnWebGPU
  * 
  * MIT License
- * Copyright (c) 2022-2023 Elie Michel and the wgpu-native authors
+ * Copyright (c) 2022-2024 Elie Michel and the wgpu-native authors
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,7 @@
 #define _glfw3_webgpu_h_
 
 #include "../webgpu.h"
-#include "GLFW/glfw3.h"
+#include <GLFW/glfw3.h>
 
 #ifdef __cplusplus
 extern "C" {
