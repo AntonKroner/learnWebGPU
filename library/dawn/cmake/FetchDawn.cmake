@@ -1,3 +1,27 @@
+# This file is part of the "Learn WebGPU for C++" book.
+#   https://eliemichel.github.io/LearnWebGPU
+# 
+# MIT License
+# Copyright (c) 2022-2024 Elie Michel and the wgpu-native authors
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 # Prevent multiple includes
 if (TARGET dawn_native)
 	return()
@@ -8,15 +32,20 @@ include(FetchContent)
 FetchContent_Declare(
 	dawn
 	#GIT_REPOSITORY https://dawn.googlesource.com/dawn
-	#GIT_TAG        chromium/5869
+	#GIT_TAG        chromium/6536
 	#GIT_SHALLOW ON
 
 	# Manual download mode, even shallower than GIT_SHALLOW ON
 	DOWNLOAD_COMMAND
 		cd ${FETCHCONTENT_BASE_DIR}/dawn-src &&
 		git init &&
-		git fetch --depth=1 https://dawn.googlesource.com/dawn chromium/5869 &&
+		git fetch --depth=1 https://dawn.googlesource.com/dawn chromium/6536 &&
 		git reset --hard FETCH_HEAD
+
+	PATCH_COMMAND
+		"${CMAKE_COMMAND}" -E copy
+		"${CMAKE_CURRENT_LIST_DIR}/../patch/tools/fetch_dawn_dependencies.py"
+		tools
 )
 
 FetchContent_GetProperties(dawn)
@@ -34,32 +63,40 @@ if (NOT dawn_POPULATED)
 		set(USE_VULKAN ON)
 		set(USE_METAL OFF)
 	endif()
-	set(DAWN_ENABLE_D3D11 OFF)
-	set(DAWN_ENABLE_D3D12 OFF)
-	set(DAWN_ENABLE_METAL ${USE_METAL})
-	set(DAWN_ENABLE_NULL OFF)
-	set(DAWN_ENABLE_DESKTOP_GL OFF)
-	set(DAWN_ENABLE_OPENGLES OFF)
-	set(DAWN_ENABLE_VULKAN ${USE_VULKAN})
-	set(TINT_BUILD_SPV_READER OFF)
+	set(DAWN_ENABLE_D3D11 OFF CACHE BOOL "Enable compilation of the D3D11 backend")
+	set(DAWN_ENABLE_D3D12 OFF CACHE BOOL "Enable compilation of the D3D12 backend")
+	set(DAWN_ENABLE_METAL ${USE_METAL} CACHE BOOL "Enable compilation of the Metal backend")
+	set(DAWN_ENABLE_NULL OFF CACHE BOOL "Enable compilation of the Null backend")
+	set(DAWN_ENABLE_DESKTOP_GL OFF CACHE BOOL "Enable compilation of the OpenGL backend")
+	set(DAWN_ENABLE_OPENGLES OFF CACHE BOOL "Enable compilation of the OpenGL ES backend")
+	set(DAWN_ENABLE_VULKAN ${USE_VULKAN} CACHE BOOL "Enable compilation of the Vulkan backend")
+	set(TINT_BUILD_SPV_READER OFF CACHE BOOL "Build the SPIR-V input reader")
+	if(${DAWN_ENABLE_D3D11} OR ${DAWN_ENABLE_D3D12})
+		set(TINT_BUILD_HLSL_WRITER ON CACHE BOOL "Build the HLSL output writer" FORCE)
+	endif()
+	if(${DAWN_ENABLE_DESKTOP_GL} OR ${DAWN_ENABLE_OPENGLES})
+		set(TINT_BUILD_GLSL_WRITER ON CACHE BOOL "Build the GLSL output writer" FORCE)
+	endif()
+	if(${DAWN_ENABLE_VULKAN})
+		set(TINT_BUILD_SPV_WRITER ON CACHE BOOL "Build the SPIR-V output writer" FORCE)
+	endif()
+	if(${DAWN_ENABLE_METAL})
+		set(TINT_BUILD_MSL_WRITER ON CACHE BOOL "Build the MSL output writer" FORCE)
+	endif()
 
 	# Disable unneeded parts
-	set(DAWN_BUILD_SAMPLES OFF)
-	set(TINT_BUILD_TINT OFF)
-	set(TINT_BUILD_SAMPLES OFF)
-	set(TINT_BUILD_DOCS OFF)
-	set(TINT_BUILD_TESTS OFF)
-	set(TINT_BUILD_FUZZERS OFF)
-	set(TINT_BUILD_SPIRV_TOOLS_FUZZER OFF)
-	set(TINT_BUILD_AST_FUZZER OFF)
-	set(TINT_BUILD_REGEX_FUZZER OFF)
-	set(TINT_BUILD_BENCHMARKS OFF)
-	set(TINT_BUILD_TESTS OFF)
-	set(TINT_BUILD_AS_OTHER_OS OFF)
-	set(TINT_BUILD_REMOTE_COMPILE OFF)
+	set(DAWN_BUILD_SAMPLES OFF CACHE BOOL "Enables building Dawn's samples")
+	set(TINT_BUILD_TINTD OFF CACHE BOOL "Build the WGSL language server")
+	set(TINT_BUILD_TESTS OFF CACHE BOOL "Build tests")
+	set(TINT_BUILD_FUZZERS OFF CACHE BOOL "Build fuzzers")
+	set(TINT_BUILD_AST_FUZZER OFF CACHE BOOL "Build AST fuzzer")
+	set(TINT_BUILD_REGEX_FUZZER OFF CACHE BOOL "Build regex fuzzer")
+	set(TINT_BUILD_IR_FUZZER OFF CACHE BOOL "Build IR fuzzer")
+	set(TINT_BUILD_BENCHMARKS OFF CACHE BOOL "Build Tint benchmarks")
+	set(TINT_BUILD_AS_OTHER_OS OFF CACHE BOOL "Override OS detection to force building of *_other.cc files")
 
-	add_subdirectory(${dawn_SOURCE_DIR} ${dawn_BINARY_DIR})
-endif ()
+	add_subdirectory(${dawn_SOURCE_DIR} ${dawn_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
 
 set(AllDawnTargets
 	core_tables
@@ -78,28 +115,110 @@ set(AllDawnTargets
 	extinst_tables
 	webgpu_dawn
 	webgpu_headers_gen
-	libtint
-	tint_diagnostic_utils
-	tint_utils_io
-	tint_val
+	
 	tint-format
 	tint-lint
-)
-
-set(AllGlfwTargets
-	glfw
-	update_mappings
+	tint_api
+	tint_api_common
+	tint_api_options
+	tint_cmd_common
+	tint_cmd_info_cmd
+	tint_cmd_loopy_cmd
+	tint_cmd_remote_compile_cmd
+	tint_cmd_tint_cmd
+	tint_lang_core
+	tint_lang_core_constant
+	tint_lang_core_intrinsic
+	tint_lang_core_ir
+	tint_lang_core_ir_transform
+	tint_lang_core_ir_transform_common
+	tint_lang_core_type
+	tint_lang_glsl_writer
+	tint_lang_glsl_writer_common
+	tint_lang_glsl_writer_printer
+	tint_lang_glsl_writer_ast_printer
+	tint_lang_glsl_writer_ast_raise
+	tint_lang_glsl_writer_raise
+	tint_lang_glsl_validate
+	tint_lang_hlsl_writer_common
+	tint_lang_hlsl_writer_helpers
+	tint_lang_msl
+	tint_lang_msl_intrinsic
+	tint_lang_msl_ir
+	tint_lang_msl_writer_raise
+	tint_lang_spirv
+	tint_lang_spirv_intrinsic
+	tint_lang_spirv_ir
+	tint_lang_spirv_reader_common
+	tint_lang_spirv_reader_lower
+	tint_lang_spirv_type
+	tint_lang_spirv_validate
+	tint_lang_spirv_writer
+	tint_lang_spirv_writer_ast_printer
+	tint_lang_spirv_writer_ast_raise
+	tint_lang_spirv_writer_common
+	tint_lang_spirv_writer_helpers
+	tint_lang_spirv_writer_printer
+	tint_lang_spirv_writer_raise
+	tint_lang_wgsl
+	tint_lang_wgsl_ast
+	tint_lang_wgsl_ast_transform
+	tint_lang_wgsl_common
+	tint_lang_wgsl_features
+	tint_lang_wgsl_helpers
+	tint_lang_wgsl_inspector
+	tint_lang_wgsl_intrinsic
+	tint_lang_wgsl_ir
+	tint_lang_wgsl_program
+	tint_lang_wgsl_reader
+	tint_lang_wgsl_reader_lower
+	tint_lang_wgsl_reader_parser
+	tint_lang_wgsl_reader_program_to_ir
+	tint_lang_wgsl_resolver
+	tint_lang_wgsl_sem
+	tint_lang_wgsl_writer
+	tint_lang_wgsl_writer_ast_printer
+	tint_lang_wgsl_writer_ir_to_program
+	tint_lang_wgsl_writer_raise
+	tint_lang_wgsl_writer_syntax_tree_printer
+	tint_lang_core_common
+	tint_lang_hlsl_writer
+	tint_lang_hlsl_writer_ast_printer
+	tint_lang_hlsl_writer_ast_raise
+	tint_lang_hlsl_writer_printer
+	tint_lang_hlsl_writer_raise
+	tint_utils_bytes
+	tint_utils_cli
+	tint_utils_command
+	tint_utils_containers
+	tint_utils_debug
+	tint_utils_diagnostic
+	tint_utils_file
+	tint_utils_generator
+	tint_utils_ice
+	tint_utils_id
+	tint_utils_macros
+	tint_utils_math
+	tint_utils_memory
+	tint_utils_reflection
+	tint_utils_result
+	tint_utils_rtti
+	tint_utils_socket
+	tint_utils_strconv
+	tint_utils_symbol
+	tint_utils_system
+	tint_utils_text
+	tint_utils_traits
 )
 
 foreach (Target ${AllDawnTargets})
 	if (TARGET ${Target})
-		set_property(TARGET ${Target} PROPERTY FOLDER "External/Dawn")
-	endif()
-endforeach()
-
-foreach (Target ${AllGlfwTargets})
-	if (TARGET ${Target})
-		set_property(TARGET ${Target} PROPERTY FOLDER "External/GLFW3")
+		# Is a target...
+		get_property(AliasedTarget TARGET "${Target}" PROPERTY ALIASED_TARGET)
+		if("${AliasedTarget}" STREQUAL "")
+			# ...and is not an alias -> move to the Dawn folder
+			set_property(TARGET ${Target} PROPERTY FOLDER "Dawn")
+		endif()
 	endif()
 endforeach()
 

@@ -52,7 +52,6 @@ void Application_Compute_compute(
   WGPUComputePassDescriptor descriptor = {
     .nextInChain = 0,
     .label = "compute pass",
-    .timestampWriteCount = 0,
     .timestampWrites = 0,
   };
   WGPUComputePassEncoder pass = wgpuCommandEncoderBeginComputePass(encoder, &descriptor);

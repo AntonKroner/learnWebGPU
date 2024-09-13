@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.0...3.22.1)
+set(CMAKE_C_COMPILER gcc-13)
+set(CMAKE_CXX_COMPILER g++-13)
 project(
     learnWebGPU
     VERSION 0.1.0

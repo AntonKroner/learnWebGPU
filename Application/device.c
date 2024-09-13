@@ -74,7 +74,7 @@ WGPUDevice Application_device_request(WGPUAdapter adapter) {
   WGPUDeviceDescriptor descriptor = {
     .nextInChain = 0,
     .label = "Device 1",
-    .requiredFeaturesCount = 0,
+    .requiredFeatureCount = 0,
     .requiredFeatures = 0,
     .requiredLimits = &required,
     .defaultQueue.label = "default queueuue",
@@ -117,7 +117,7 @@ WGPUShaderModule Application_device_ShaderModule(WGPUDevice device, const char* 
     .label = path,
   };
   WGPUShaderModule result = wgpuDeviceCreateShaderModule(device, &shaderDescriptor);
-  wgpuShaderModuleGetCompilationInfo(result, &compilationPrint, 0);
+  // wgpuShaderModuleGetCompilationInfo(result, &compilationPrint, 0);
   free(shader);
   return result;
 }
