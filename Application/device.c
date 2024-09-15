@@ -117,7 +117,7 @@ WGPUShaderModule Application_device_ShaderModule(WGPUDevice device, const char* 
     .label = path,
   };
   WGPUShaderModule result = wgpuDeviceCreateShaderModule(device, &shaderDescriptor);
-  // wgpuShaderModuleGetCompilationInfo(result, &compilationPrint, 0);
+  wgpuShaderModuleGetCompilationInfo(result, &compilationPrint, 0);
   free(shader);
   return result;
 }
@@ -350,6 +350,8 @@ static char* compilationStatusStringify(WGPUCompilationInfoRequestStatus status)
       return "Error";
     case WGPUCompilationInfoRequestStatus_DeviceLost:
       return "DeviceLost";
+    case WGPUCompilationInfoRequestStatus_InstanceDropped:
+      return "InstanceDropped";
     case WGPUCompilationInfoRequestStatus_Unknown:
       return "Unknown";
     case WGPUCompilationInfoRequestStatus_Force32:
