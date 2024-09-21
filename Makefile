@@ -1,7 +1,7 @@
-all: build webgpu.exe
+all: build compile
 build:
 	cmake . -B build
-webgpu.exe: build
+compile: build
 	cmake --build build
 vcpkg: vcpkg
 	git clone https://github.com/Microsoft/vcpkg.git --depth=1 && \

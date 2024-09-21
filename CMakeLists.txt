@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.0...3.22.1)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_C_COMPILER gcc-13)
 set(CMAKE_CXX_COMPILER g++-13)
 project(
@@ -7,7 +8,6 @@ project(
     LANGUAGES C CXX
 )
 set(CMAKE_TOOLCHAIN_FILE ./vcpkg/scripts/buildsystems/vcpkg.cmake)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_executable(webgpu.exe
 	main.c
@@ -26,6 +26,10 @@ set_target_properties(webgpu.exe PROPERTIES
 target_compile_definitions(webgpu.exe PRIVATE
     RESOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources"
 )
+set(glfw3_DIR ./vcpkg_installed/x64-linux/share/glfw3)
+find_package(glfw3 CONFIG REQUIRED)
+set(glfw3_DIR ./vcpkg_installed/x64-linux/share/glfw3)
+find_package(glfw3 CONFIG REQUIRED)
 include_directories("./library")
 if (NOT EMSCRIPTEN)
 include_directories("./vcpkg_installed/x64-linux/include")

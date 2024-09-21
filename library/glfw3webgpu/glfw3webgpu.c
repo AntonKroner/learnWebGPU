@@ -32,9 +32,9 @@
 
 #include "glfw3webgpu.h"
 
-#include "../webgpu.h"
+#include "webgpu.h"
 
-#include <GLFW/glfw3.h>
+#include "GLFW/glfw3.h"
 
 #ifdef __EMSCRIPTEN__
   #define GLFW_EXPOSE_NATIVE_EMSCRIPTEN
@@ -59,7 +59,7 @@
 #endif
 
 #ifndef __EMSCRIPTEN__
-  #include <GLFW/glfw3native.h>
+  #include "GLFW/glfw3native.h"
 #endif
 
 WGPUSurface glfwGetWGPUSurface(WGPUInstance instance, GLFWwindow* window) {
