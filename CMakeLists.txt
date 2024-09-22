@@ -28,8 +28,6 @@ target_compile_definitions(webgpu.exe PRIVATE
 )
 set(glfw3_DIR ./vcpkg_installed/x64-linux/share/glfw3)
 find_package(glfw3 CONFIG REQUIRED)
-set(glfw3_DIR ./vcpkg_installed/x64-linux/share/glfw3)
-find_package(glfw3 CONFIG REQUIRED)
 include_directories("./library")
 if (NOT EMSCRIPTEN)
 include_directories("./vcpkg_installed/x64-linux/include")
