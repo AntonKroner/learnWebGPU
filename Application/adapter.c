@@ -26,10 +26,10 @@ static void adapter_onRequest(
 WGPUAdapter Application_adapter_request(
   WGPUInstance instance,
   const WGPURequestAdapterOptions* options) {
-  Response userData = { .adapter = 0, .done = false };
-  wgpuInstanceRequestAdapter(instance, options, adapter_onRequest, (void*)&userData);
-  assert(userData.done);
-  return userData.adapter;
+  Response response = { .adapter = 0, .done = false };
+  wgpuInstanceRequestAdapter(instance, options, adapter_onRequest, (void*)&response);
+  assert(response.done);
+  return response.adapter;
 }
 static const char* featureStringify(WGPUFeatureName feature);
 static const char* typeStringify(WGPUAdapterType type);
@@ -130,7 +130,6 @@ static const char* featureStringify(WGPUFeatureName feature) {
     STRINGIFY(WGPUFeatureName_DepthClipControl);
     STRINGIFY(WGPUFeatureName_Depth32FloatStencil8);
     STRINGIFY(WGPUFeatureName_TimestampQuery);
-    STRINGIFY(WGPUFeatureName_PipelineStatisticsQuery);
     STRINGIFY(WGPUFeatureName_TextureCompressionBC);
     STRINGIFY(WGPUFeatureName_TextureCompressionETC2);
     STRINGIFY(WGPUFeatureName_TextureCompressionASTC);
@@ -139,16 +138,60 @@ static const char* featureStringify(WGPUFeatureName feature) {
     STRINGIFY(WGPUFeatureName_RG11B10UfloatRenderable);
     STRINGIFY(WGPUFeatureName_BGRA8UnormStorage);
     STRINGIFY(WGPUFeatureName_Float32Filterable);
-    STRINGIFY(WGPUFeatureName_DawnShaderFloat16);
     STRINGIFY(WGPUFeatureName_DawnInternalUsages);
     STRINGIFY(WGPUFeatureName_DawnMultiPlanarFormats);
     STRINGIFY(WGPUFeatureName_DawnNative);
-    STRINGIFY(WGPUFeatureName_ChromiumExperimentalDp4a);
-    STRINGIFY(WGPUFeatureName_TimestampQueryInsidePasses);
+    STRINGIFY(WGPUFeatureName_ChromiumExperimentalTimestampQueryInsidePasses);
     STRINGIFY(WGPUFeatureName_ImplicitDeviceSynchronization);
     STRINGIFY(WGPUFeatureName_SurfaceCapabilities);
     STRINGIFY(WGPUFeatureName_TransientAttachments);
     STRINGIFY(WGPUFeatureName_MSAARenderToSingleSampled);
+    STRINGIFY(WGPUFeatureName_DualSourceBlending);
+    STRINGIFY(WGPUFeatureName_D3D11MultithreadProtected);
+    STRINGIFY(WGPUFeatureName_ANGLETextureSharing);
+    STRINGIFY(WGPUFeatureName_ChromiumExperimentalSubgroups);
+    STRINGIFY(WGPUFeatureName_ChromiumExperimentalSubgroupUniformControlFlow);
+    STRINGIFY(WGPUFeatureName_PixelLocalStorageCoherent);
+    STRINGIFY(WGPUFeatureName_PixelLocalStorageNonCoherent);
+    STRINGIFY(WGPUFeatureName_Unorm16TextureFormats);
+    STRINGIFY(WGPUFeatureName_Snorm16TextureFormats);
+    STRINGIFY(WGPUFeatureName_MultiPlanarFormatExtendedUsages);
+    STRINGIFY(WGPUFeatureName_MultiPlanarFormatP010);
+    STRINGIFY(WGPUFeatureName_HostMappedPointer);
+    STRINGIFY(WGPUFeatureName_MultiPlanarRenderTargets);
+    STRINGIFY(WGPUFeatureName_MultiPlanarFormatNv12a);
+    STRINGIFY(WGPUFeatureName_FramebufferFetch);
+    STRINGIFY(WGPUFeatureName_BufferMapExtendedUsages);
+    STRINGIFY(WGPUFeatureName_AdapterPropertiesMemoryHeaps);
+    STRINGIFY(WGPUFeatureName_AdapterPropertiesD3D);
+    STRINGIFY(WGPUFeatureName_AdapterPropertiesVk);
+    STRINGIFY(WGPUFeatureName_R8UnormStorage);
+    STRINGIFY(WGPUFeatureName_FormatCapabilities);
+    STRINGIFY(WGPUFeatureName_DrmFormatCapabilities);
+    STRINGIFY(WGPUFeatureName_Norm16TextureFormats);
+    STRINGIFY(WGPUFeatureName_MultiPlanarFormatNv16);
+    STRINGIFY(WGPUFeatureName_MultiPlanarFormatNv24);
+    STRINGIFY(WGPUFeatureName_MultiPlanarFormatP210);
+    STRINGIFY(WGPUFeatureName_MultiPlanarFormatP410);
+    STRINGIFY(WGPUFeatureName_SharedTextureMemoryVkDedicatedAllocation);
+    STRINGIFY(WGPUFeatureName_SharedTextureMemoryAHardwareBuffer);
+    STRINGIFY(WGPUFeatureName_SharedTextureMemoryDmaBuf);
+    STRINGIFY(WGPUFeatureName_SharedTextureMemoryOpaqueFD);
+    STRINGIFY(WGPUFeatureName_SharedTextureMemoryZirconHandle);
+    STRINGIFY(WGPUFeatureName_SharedTextureMemoryDXGISharedHandle);
+    STRINGIFY(WGPUFeatureName_SharedTextureMemoryD3D11Texture2D);
+    STRINGIFY(WGPUFeatureName_SharedTextureMemoryIOSurface);
+    STRINGIFY(WGPUFeatureName_SharedTextureMemoryEGLImage);
+    STRINGIFY(WGPUFeatureName_SharedFenceVkSemaphoreOpaqueFD);
+    STRINGIFY(WGPUFeatureName_SharedFenceVkSemaphoreSyncFD);
+    STRINGIFY(WGPUFeatureName_SharedFenceVkSemaphoreZirconHandle);
+    STRINGIFY(WGPUFeatureName_SharedFenceDXGISharedHandle);
+    STRINGIFY(WGPUFeatureName_SharedFenceMTLSharedEvent);
+    STRINGIFY(WGPUFeatureName_SharedBufferMemoryD3D12Resource);
+    STRINGIFY(WGPUFeatureName_StaticSamplers);
+    STRINGIFY(WGPUFeatureName_YCbCrVulkanSamplers);
+    STRINGIFY(WGPUFeatureName_ShaderModuleCompilationOptions);
+    STRINGIFY(WGPUFeatureName_DawnLoadResolveTexture);
     STRINGIFY(WGPUFeatureName_Force32);
   }
 }

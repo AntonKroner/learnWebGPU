@@ -8,6 +8,8 @@ add_library(cimgui STATIC
 		cimgui_impl_wgpu.h
     cimgui_impl_wgpu.cpp
 )
+set(glfw3_DIR ../../vcpkg_installed/x64-linux/share/glfw3)
+find_package(glfw3 CONFIG REQUIRED)
 set(imgui_DIR ../../vcpkg_installed/x64-linux/share/imgui)
 find_package(imgui CONFIG REQUIRED)
 

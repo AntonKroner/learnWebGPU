@@ -13,6 +13,7 @@ WGPURenderPassEncoder Application_RenderPassEncoder_make(
     .loadOp = WGPULoadOp_Clear,
     .storeOp = WGPUStoreOp_Store,
     .clearValue = {.r = 0.05, .g = 0.05, .b = 0.05, .a = 1.0},
+    .depthSlice = WGPU_DEPTH_SLICE_UNDEFINED,
   };
   WGPURenderPassDepthStencilAttachment depthStencilAttachment = {
     .view = depth,
@@ -30,7 +31,6 @@ WGPURenderPassEncoder Application_RenderPassEncoder_make(
     .colorAttachmentCount = 1,
     .colorAttachments = &renderPassColorAttachment,
     .depthStencilAttachment = &depthStencilAttachment,
-    .timestampWriteCount = 0,
     .timestampWrites = 0,
   };
   WGPURenderPassEncoder renderPass =
