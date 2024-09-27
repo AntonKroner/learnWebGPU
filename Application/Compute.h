@@ -1,9 +1,9 @@
 #ifndef Compute_H_
-#define Compute_H_
+  #define Compute_H_
 
-#include "webgpu.h"
-#include "./BindGroupLayoutEntry.h"
-#include "./device.h"
+  #include "webgpu.h"
+  #include "./BindGroupLayoutEntry.h"
+  #include "./device.h"
 
 typedef struct {
     WGPUComputePipeline pipeline;
@@ -151,3 +151,41 @@ static void Compute_buffers_attach(Application_Compute compute[static 1]) {
 }
 
 #endif // Compute_H_
+
+// void Application_compute(Application application[static 1]) {
+//   // Initialize a command encoder
+//   WGPUCommandEncoderDescriptor commandEncoderDesc = {
+//     .nextInChain = 0,
+//     .label = "Command Encoder",
+//   };
+//   WGPUCommandEncoder encoder =
+//     wgpuDeviceCreateCommandEncoder(application->device, &commandEncoderDesc);
+
+//   // Create and use compute pass here!
+//   WGPUComputePassDescriptor descriptor = {
+//     .nextInChain = 0,
+//     .label = "compute pass",
+//     .timestampWrites = 0,
+//   };
+//   WGPUComputePassEncoder pass = wgpuCommandEncoderBeginComputePass(encoder, &descriptor);
+
+//   WGPUComputePipeline pipeline = computePipeline_attach(application);
+
+//   wgpuComputePassEncoderSetPipeline(pass, pipeline);
+//   wgpuComputePassEncoderSetBindGroup(pass, 0, 0, 0, 0);
+//   wgpuComputePassEncoderDispatchWorkgroups(pass, 1, 1, 1);
+
+//   wgpuComputePassEncoderEnd(pass);
+//   WGPUCommandBufferDescriptor cmdBufferDescriptor = {
+//     .nextInChain = 0,
+//     .label = "command buffer",
+//   };
+//   // Encode and submit the GPU commands
+//   WGPUCommandBuffer commands = wgpuCommandEncoderFinish(encoder, &cmdBufferDescriptor);
+
+//   wgpuQueueSubmit(application->queue, 1, &commands);
+//   wgpuCommandBufferRelease(commands);
+//   wgpuCommandEncoderRelease(encoder);
+//   wgpuComputePassEncoderRelease(pass);
+//   wgpuDeviceTick(application->device);
+// }
