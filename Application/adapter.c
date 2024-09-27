@@ -27,7 +27,7 @@ WGPUAdapter Application_adapter_request(
   WGPUInstance instance,
   const WGPURequestAdapterOptions* options) {
   Response response = { .adapter = 0, .done = false };
-  wgpuInstanceRequestAdapter(instance, options, adapter_onRequest, (void*)&response);
+  wgpuInstanceRequestAdapter(instance, options, adapter_onRequest, &response);
   assert(response.done);
   return response.adapter;
 }

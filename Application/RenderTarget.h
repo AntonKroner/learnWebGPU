@@ -15,10 +15,9 @@ typedef struct {
         WGPUTextureView view;
     } texture;
     struct {
-        WGPUBuffer vertex;
-        WGPUBuffer uniform;
-    } buffers;
-    size_t vertexCount;
+        WGPUBuffer buffer;
+        size_t count;
+    } vertex;
     WGPURenderPipeline pipeline;
     WGPUBindGroup bindGroup;
 } RenderTarget;
@@ -27,28 +26,18 @@ static void buffers_attach(
   RenderTarget target[static 1],
   WGPUDevice device,
   size_t vertexCount) {
-  WGPUBufferDescriptor vertexBufferDescriptor = {
+  WGPUBufferDescriptor descriptor = {
     .nextInChain = 0,
     .label = "vertex buffer",
     .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex,
     .mappedAtCreation = false,
     .size = vertexCount * sizeof(Model_Vertex),
   };
-  target->buffers.vertex = wgpuDeviceCreateBuffer(device, &vertexBufferDescriptor);
-  WGPUBufferDescriptor uniformBufferDescriptor = {
-    .nextInChain = 0,
-    .label = "uniform buffer",
-    .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform,
-    .mappedAtCreation = false,
-    .size = 224, //sizeof(Uniforms),
-  };
-  target->buffers.uniform = wgpuDeviceCreateBuffer(device, &uniformBufferDescriptor);
+  target->vertex.buffer = wgpuDeviceCreateBuffer(device, &descriptor);
 }
 static void buffers_detach(RenderTarget target[static 1]) {
-  wgpuBufferDestroy(target->buffers.vertex);
-  wgpuBufferRelease(target->buffers.vertex);
-  wgpuBufferDestroy(target->buffers.uniform);
-  wgpuBufferRelease(target->buffers.uniform);
+  wgpuBufferDestroy(target->vertex.buffer);
+  wgpuBufferRelease(target->vertex.buffer);
 }
 static void texture_attach(
   RenderTarget target[static 1],
@@ -80,20 +69,24 @@ RenderTarget RenderTarget_create(
   WGPUDevice device,
   WGPUQueue queue,
   WGPUTextureFormat depthFormat,
-  WGPUBuffer lightningBuffer) {
+  WGPUBuffer lightningBuffer,
+  size_t lightningBufferSize,
+  WGPUBuffer uniformBuffer,
+  size_t uniformBufferSize,
+  float xOffset) {
   RenderTarget result = { 0 };
   result.shader =
     Application_device_ShaderModule(device, RESOURCE_DIR "/lightning/specularity.wgsl");
   texture_attach(&result, device, RESOURCE_DIR "/fourareen/fourareen2K_albedo.jpg");
-  Model model = Model_load(RESOURCE_DIR "/fourareen/fourareen.obj");
-  result.vertexCount = model.vertexCount;
-  buffers_attach(&result, device, result.vertexCount);
+  Model model = Model_load(RESOURCE_DIR "/fourareen/fourareen.obj", xOffset);
+  result.vertex.count = model.vertexCount;
+  buffers_attach(&result, device, result.vertex.count);
   wgpuQueueWriteBuffer(
     queue,
-    result.buffers.vertex,
+    result.vertex.buffer,
     0,
     model.vertices,
-    result.vertexCount * sizeof(Model_Vertex));
+    result.vertex.count * sizeof(Model_Vertex));
   Model_unload(&model);
   // pipeline
   WGPUBlendState blendState = {
@@ -132,8 +125,8 @@ RenderTarget RenderTarget_create(
     Application_BindGroupLayoutEntry_make(),
   };
   bindingLayouts[0].buffer.type = WGPUBufferBindingType_Uniform;
-  bindingLayouts[0].buffer.minBindingSize = 224, //sizeof(Uniforms);
-    bindingLayouts[1].binding = 1;
+  bindingLayouts[0].buffer.minBindingSize = uniformBufferSize;
+  bindingLayouts[1].binding = 1;
   bindingLayouts[1].visibility = WGPUShaderStage_Fragment;
   bindingLayouts[1].texture.sampleType = WGPUTextureSampleType_Float;
   bindingLayouts[1].texture.viewDimension = WGPUTextureViewDimension_2D;
@@ -143,7 +136,7 @@ RenderTarget RenderTarget_create(
   bindingLayouts[3].binding = 3;
   bindingLayouts[3].visibility = WGPUShaderStage_Fragment;
   bindingLayouts[3].buffer.type = WGPUBufferBindingType_Uniform;
-  bindingLayouts[3].buffer.minBindingSize = 80; //sizeof(Application_Lighting_Uniforms);
+  bindingLayouts[3].buffer.minBindingSize = lightningBufferSize;
   WGPUBindGroupLayoutDescriptor bindGroupLayoutDescriptor = {
     .nextInChain = 0,
     .entryCount = 4,
@@ -214,10 +207,10 @@ RenderTarget RenderTarget_create(
     {
      .nextInChain = 0,
      .binding = 0,
-     .buffer = result.buffers.uniform,
+     .buffer = uniformBuffer,
      .offset = 0,
-     .size = 224, //sizeof(Uniforms),
-    },
+     .size = uniformBufferSize,
+     },
     {
      .nextInChain = 0,
      .binding = 1,
@@ -233,8 +226,8 @@ RenderTarget RenderTarget_create(
      .binding = 3,
      .buffer = lightningBuffer,
      .offset = 0,
-     .size = 80, //sizeof(Application_Lighting_Uniforms),
-    }
+     .size = lightningBufferSize,
+     }
   };
   WGPUBindGroupDescriptor bindGroupDescriptor = {
     .nextInChain = 0,
@@ -257,11 +250,11 @@ void RenderTarget_render(RenderTarget target, WGPURenderPassEncoder renderPass) 
   wgpuRenderPassEncoderSetVertexBuffer(
     renderPass,
     0,
-    target.buffers.vertex,
+    target.vertex.buffer,
     0,
-    target.vertexCount * sizeof(Model_Vertex));
+    target.vertex.count * sizeof(Model_Vertex));
   wgpuRenderPassEncoderSetBindGroup(renderPass, 0, target.bindGroup, 0, 0);
-  wgpuRenderPassEncoderDraw(renderPass, target.vertexCount, 1, 0, 0);
+  wgpuRenderPassEncoderDraw(renderPass, target.vertex.count, 1, 0, 0);
 }
 
 #endif // RenderTarget_H_

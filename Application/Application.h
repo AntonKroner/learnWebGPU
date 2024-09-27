@@ -21,6 +21,7 @@
 
 #define WIDTH (1280)
 #define HEIGHT (960)
+#define TARGET_COUNT (3)
 
 typedef struct {
     struct {
@@ -33,7 +34,6 @@ typedef struct {
     float time;
 } Uniforms;
 typedef struct {
-    char* name;
     GLFWwindow* window;
     WGPUInstance instance;
     WGPUSurface surface;
@@ -41,8 +41,9 @@ typedef struct {
     WGPUDevice device;
     WGPUQueue queue;
     Application_Depth depth;
-    RenderTarget target;
+    RenderTarget targets[TARGET_COUNT];
     Uniforms uniforms;
+    WGPUBuffer uniformBuffer;
     Camera camera;
     Application_Lighting lightning;
     Application_Compute compute;
@@ -67,6 +68,39 @@ static void surface_attach(Application application[static 1], size_t width, size
     .alphaMode = WGPUCompositeAlphaMode_Auto,
   };
   wgpuSurfaceConfigure(application->surface, &configuration);
+}
+static void uniform_attach(Application application[static 1], double width, double height) {
+  application->camera.position.components[0] = -2.0f;
+  application->camera.position.components[1] = -3.0f;
+  application->camera.zoom = -1.2;
+  Uniforms uniforms = {
+    .matrices.model = Matrix4f_transpose(Matrix4f_diagonal(1.0)),
+    .matrices.view = Matrix4f_transpose(Matrix4f_lookAt(
+      Vector3f_make(-2.0f, -3.0f, 2.0f),
+      Vector3f_fill(0.0f),
+      Vector3f_make(0, 0, 1.0f))),
+    .matrices.projection =
+      Matrix4f_transpose(Matrix4f_perspective(45, width / height, 0.01f, 100.0f)),
+    .time = 0.0f,
+    .cameraPosition = Vector3f_make(
+      application->camera.position.components[0],
+      application->camera.position.components[1],
+      1.0f),
+    .color = Vector4f_make(0.0f, 1.0f, 0.4f, 1.0f),
+  };
+  application->uniforms = uniforms;
+  WGPUBufferDescriptor descriptor = {
+    .nextInChain = 0,
+    .label = "uniform buffer",
+    .usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform,
+    .mappedAtCreation = false,
+    .size = sizeof(Uniforms),
+  };
+  application->uniformBuffer = wgpuDeviceCreateBuffer(application->device, &descriptor);
+}
+static void uniform_detach(Application application[static 1]) {
+  wgpuBufferDestroy(application->uniformBuffer);
+  wgpuBufferRelease(application->uniformBuffer);
 }
 static void onResize(GLFWwindow* window, int width, int height) {
   Application* application = (Application*)glfwGetWindowUserPointer(window);
@@ -150,6 +184,7 @@ Application* Application_create(bool inspect) {
     result = 0;
   }
   else if (!glfwInit()) {
+    glfwTerminate();
     free(result);
     perror("Could not initialize GLFW.");
     result = 0;
@@ -195,29 +230,18 @@ Application* Application_create(bool inspect) {
     result->queue = wgpuDeviceGetQueue(result->device);
     result->depth = Application_Depth_attach(result->device, width, height);
     result->lightning = Application_Lightning_create(result->device);
-    result->target = RenderTarget_create(
-      result->device,
-      result->queue,
-      result->depth.format,
-      result->lightning.buffer);
-    result->camera.position.components[0] = -2.0f;
-    result->camera.position.components[1] = -3.0f;
-    result->camera.zoom = -1.2;
-    Uniforms uniforms = {
-      .matrices.model = Matrix4f_transpose(Matrix4f_diagonal(1.0)),
-      .matrices.view = Matrix4f_transpose(Matrix4f_lookAt(
-        Vector3f_make(-2.0f, -3.0f, 2.0f),
-        Vector3f_fill(0.0f),
-        Vector3f_make(0, 0, 1.0f))),
-      .matrices.projection =
-        Matrix4f_transpose(Matrix4f_perspective(45, 640.0f / 480.0f, 0.01f, 100.0f)),
-      .time = 0.0f,
-      .cameraPosition = { .components = { result->camera.position.components[0],
-                                          result->camera.position.components[1],
-                                          0 } },
-      .color = Vector4f_make(0.0f, 1.0f, 0.4f, 1.0f),
-    };
-    result->uniforms = uniforms;
+    uniform_attach(result, width, height);
+    for (size_t i = 0; TARGET_COUNT > i; i++) {
+      result->targets[i] = RenderTarget_create(
+        result->device,
+        result->queue,
+        result->depth.format,
+        result->lightning.buffer,
+        sizeof(Application_Lighting_Uniforms),
+        result->uniformBuffer,
+        sizeof(Uniforms),
+        i * 10);
+    }
     if (!Application_gui_attach(result->window, result->device, result->depth.format)) {
       printf("gui problem!!\n");
     }
@@ -239,7 +263,7 @@ void Application_render(Application application[static 1]) {
     application->uniforms.time = (float)glfwGetTime();
     wgpuQueueWriteBuffer(
       application->queue,
-      application->target.buffers.uniform,
+      application->uniformBuffer,
       0,
       &application->uniforms,
       sizeof(Uniforms));
@@ -251,7 +275,9 @@ void Application_render(Application application[static 1]) {
       wgpuDeviceCreateCommandEncoder(application->device, &commandEncoderDesc);
     WGPURenderPassEncoder renderPass =
       Application_RenderPassEncoder_make(encoder, nextTexture, application->depth.view);
-    RenderTarget_render(application->target, renderPass);
+    for (size_t i = 0; TARGET_COUNT > i; i++) {
+      RenderTarget_render(application->targets[i], renderPass);
+    }
     Application_gui_render(renderPass, &application->lightning);
     wgpuRenderPassEncoderEnd(renderPass);
     wgpuTextureViewRelease(nextTexture);
@@ -272,7 +298,10 @@ void Application_destroy(Application* application) {
   Application_Lightning_destroy(application->lightning);
   Application_gui_detach();
   Application_Depth_detach(application->depth);
-  RenderTarget_destroy(&application->target);
+  for (size_t i = 0; TARGET_COUNT > i; i++) {
+    RenderTarget_destroy(&application->targets[i]);
+  }
+  uniform_detach(application);
   wgpuSurfaceUnconfigure(application->surface);
   wgpuSurfaceRelease(application->surface);
   wgpuQueueRelease(application->queue);
