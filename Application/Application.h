@@ -1,7 +1,7 @@
 #ifndef Application_H_
 #define Application_H_
 
-#include "./Compute.h"
+// #include "./Compute.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -15,13 +15,12 @@
 #include "./RenderPass.h"
 #include "./Depth.h"
 #include "./Lightning.h"
-#include "./RenderTarget.h"
-#include "./Fourareen.h"
+#include "./RenderTarget/RenderTarget.h"
+#include "./RenderTarget/Fourareen.h"
+#include "./RenderTarget/Mammoth.h"
 #include "./Camera.h"
 #include "./gui.h"
 
-#define WIDTH (1280)
-#define HEIGHT (960)
 #define TARGET_COUNT (3)
 
 typedef struct {
@@ -47,10 +46,10 @@ typedef struct {
     WGPUBuffer uniformBuffer;
     Camera camera;
     Application_Lighting lightning;
-    Application_Compute compute;
+    // Application_Compute compute;
 } Application;
 
-Application* Application_create(bool inspect);
+Application* Application_create(const size_t width, const size_t height, bool inspect);
 bool Application_shouldClose(Application application[static 1]);
 void Application_render(Application application[static 1]);
 void Application_destroy(Application* application);
@@ -177,7 +176,7 @@ static void attachCallbacks(Application application[static 1]) {
   glfwSetMouseButtonCallback(application->window, onMouseButton);
   glfwSetScrollCallback(application->window, onMouseScroll);
 }
-Application* Application_create(bool inspect) {
+Application* Application_create(const size_t width, const size_t height, bool inspect) {
   WGPUInstanceDescriptor descriptor = { .nextInChain = 0 };
   Application* result = calloc(1, sizeof(*result));
   if (!result) {
@@ -198,7 +197,7 @@ Application* Application_create(bool inspect) {
   }
   else if (
     setWindowHints()
-    && !(result->window = glfwCreateWindow(WIDTH, HEIGHT, "Application", NULL, NULL))) {
+    && !(result->window = glfwCreateWindow(width, height, "Application", NULL, NULL))) {
     wgpuInstanceRelease(result->instance);
     glfwTerminate();
     free(result);
@@ -223,16 +222,13 @@ Application* Application_create(bool inspect) {
       Application_adapter_inspect(adapter);
     }
     wgpuSurfaceGetCapabilities(result->surface, adapter, &result->capabilities);
-    int width = 0;
-    int height = 0;
-    glfwGetFramebufferSize(result->window, &width, &height);
     surface_attach(result, width, height);
     wgpuAdapterRelease(adapter);
     result->queue = wgpuDeviceGetQueue(result->device);
     result->depth = Application_Depth_attach(result->device, width, height);
     result->lightning = Application_Lightning_create(result->device);
     uniform_attach(result, width, height);
-    for (size_t i = 0; TARGET_COUNT > i; i++) {
+    for (size_t i = 0; TARGET_COUNT - 1 > i; i++) {
       result->targets[i] = (RenderTarget*)Fourareen_Create(
         0,
         result->device,
@@ -242,8 +238,18 @@ Application* Application_create(bool inspect) {
         sizeof(Application_Lighting_Uniforms),
         result->uniformBuffer,
         sizeof(Uniforms),
-        i * 10);
+        Vector3f_make(i * 5, 0, 0));
     }
+    result->targets[TARGET_COUNT - 1] = (RenderTarget*)Mammoth_Create(
+      0,
+      result->device,
+      result->queue,
+      result->depth.format,
+      result->lightning.buffer,
+      sizeof(Application_Lighting_Uniforms),
+      result->uniformBuffer,
+      sizeof(Uniforms),
+      Vector3f_make(0, 3, 0));
     if (!Application_gui_attach(result->window, result->device, result->depth.format)) {
       printf("gui problem!!\n");
     }

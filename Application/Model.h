@@ -42,7 +42,7 @@ static void loadFile(
   }
   *length = read_size;
 }
-Model Model_load(const char* const file, float xOffset) {
+Model Model_load(const char* const file, Vector3f offset) {
   tinyobj_shape_t* shapes = 0;
   tinyobj_material_t* materials = 0;
   tinyobj_attrib_t attributes;
@@ -69,10 +69,11 @@ Model Model_load(const char* const file, float xOffset) {
       result.vertices[i].color.components[1] = 1.0;
       result.vertices[i].color.components[2] = 1.0;
       result.vertices[i].position.components[0] =
-        attributes.vertices[3 * face.v_idx] + xOffset;
+        offset.components[0] + attributes.vertices[3 * face.v_idx];
       result.vertices[i].position.components[1] =
-        -1 * attributes.vertices[3 * face.v_idx + 2];
-      result.vertices[i].position.components[2] = attributes.vertices[3 * face.v_idx + 1];
+        offset.components[1] + -1 * attributes.vertices[3 * face.v_idx + 2];
+      result.vertices[i].position.components[2] =
+        offset.components[2] + attributes.vertices[3 * face.v_idx + 1];
       result.vertices[i].normal.components[0] = attributes.normals[3 * face.vn_idx];
       result.vertices[i].normal.components[1] =
         -1 * attributes.normals[3 * face.vn_idx + 2];

@@ -27,7 +27,7 @@ int main(int argc, char* argv[static argc + 1]) {
         printf("input: %s\n", optarg);
     }
   }
-  Application* application = Application_create(true);
+  Application* application = Application_create(1280, 960, true);
   while (!Application_shouldClose(application)) {
     Application_render(application);
   }

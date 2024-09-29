@@ -3,8 +3,9 @@
 
 #include "webgpu.h"
 #include <stdlib.h>
-#include "./device.h"
-#include "./Model.h"
+#include "linear/algebra.h"
+#include "../device.h"
+#include "../Model.h"
 #include "./DepthStencilState.h"
 #include "./BindGroupLayoutEntry.h"
 
@@ -75,14 +76,14 @@ RenderTarget* RenderTarget_create(
   size_t lightningBufferSize,
   WGPUBuffer uniformBuffer,
   size_t uniformBufferSize,
-  float xOffset,
+  Vector3f offset,
   const char* const shaderPath,
   const char* const modelPath,
   const char* const texturePath) {
   if (result || (result = calloc(1, sizeof(*result)))) {
     result->shader = Application_device_ShaderModule(device, shaderPath);
     texture_attach(result, device, texturePath);
-    Model model = Model_load(modelPath, xOffset);
+    Model model = Model_load(modelPath, offset);
     result->vertex.count = model.vertexCount;
     buffers_attach(result, device, result->vertex.count);
     wgpuQueueWriteBuffer(
