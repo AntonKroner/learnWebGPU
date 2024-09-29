@@ -16,6 +16,7 @@
 #include "./Depth.h"
 #include "./Lightning.h"
 #include "./RenderTarget.h"
+#include "./Fourareen.h"
 #include "./Camera.h"
 #include "./gui.h"
 
@@ -41,7 +42,7 @@ typedef struct {
     WGPUDevice device;
     WGPUQueue queue;
     Application_Depth depth;
-    RenderTarget targets[TARGET_COUNT];
+    RenderTarget* targets[TARGET_COUNT];
     Uniforms uniforms;
     WGPUBuffer uniformBuffer;
     Camera camera;
@@ -232,7 +233,8 @@ Application* Application_create(bool inspect) {
     result->lightning = Application_Lightning_create(result->device);
     uniform_attach(result, width, height);
     for (size_t i = 0; TARGET_COUNT > i; i++) {
-      result->targets[i] = RenderTarget_create(
+      result->targets[i] = (RenderTarget*)Fourareen_Create(
+        0,
         result->device,
         result->queue,
         result->depth.format,
@@ -293,13 +295,12 @@ void Application_render(Application application[static 1]) {
   wgpuSurfacePresent(application->surface);
   wgpuDeviceTick(application->device);
 }
-
 void Application_destroy(Application* application) {
   Application_Lightning_destroy(application->lightning);
   Application_gui_detach();
   Application_Depth_detach(application->depth);
   for (size_t i = 0; TARGET_COUNT > i; i++) {
-    RenderTarget_destroy(&application->targets[i]);
+    RenderTarget_destroy(application->targets[i]);
   }
   uniform_detach(application);
   wgpuSurfaceUnconfigure(application->surface);

@@ -42,7 +42,7 @@ static void loadFile(
   }
   *length = read_size;
 }
-Model Model_load(char* const file, float xOffset) {
+Model Model_load(const char* const file, float xOffset) {
   tinyobj_shape_t* shapes = 0;
   tinyobj_material_t* materials = 0;
   tinyobj_attrib_t attributes;
